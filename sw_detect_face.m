@@ -1,4 +1,4 @@
-function [ patches,bbox_location ] = sw_detect_face( real_image,window_size, scale,stride )
+function [ patches,bbox_location ] = sw_detect_face( img,window_size, scale,stride )
 % sw_multiscale_detect_face
 % - This is a function to proposed the potential face images via moving the
 % sliding window. 
@@ -15,22 +15,28 @@ function [ patches,bbox_location ] = sw_detect_face( real_image,window_size, sca
 %   - stride     : The steps between each save images
 %==========================================================================
 
+real_image = img;
+% img = imresize(img, scale);
+
 % single-scale sliding window
-[irow, icol] = size(real_image);
+[irow, icol] = size(img);
+window_size = int16(window_size / scale);
+stride = int16(stride / scale);
 window_r = window_size(1);
 window_c = window_size(2);
 
 
-single_patches = zeros(window_r, window_c, floor(irow/window_r) * floor(icol/window_c), 'uint8');
+
+single_patches = zeros(window_r, window_c, floor(((irow-window_r)/stride) + 1) * floor(((icol-window_c)/stride) + 1), 'uint8');
 % single_patches = zeros(window_r, window_c,5, 'uint8');
 
 % Iteratively save the patches.
 % r = randi(irow-window_r,5,1);
 % c = randi(icol-window_c,5,1);
-for i = 1:irow/window_r
-    for j = 1:icol/window_c
-        single_patches(:,:,(i-1)*floor(irow/window_r) + j) = real_image(window_r *(i-1) + 1:window_r*(i-1)+window_size, window_c *(j-1)+1:window_c*(j-1)+window_size);
-        single_bbox_location((i-1)*floor(irow/window_r) + j, :) = [(i-1)*window_r+1,(j-1)*window_c+1,window_r,window_c]; % top-left y,x, height, width
+for i = 1:((irow-window_r)/stride) + 1 %1:irow/window_r
+    for j = 1:((icol-window_c)/stride) + 1%1:icol/window_c
+        single_patches(:,:,(i-1)*floor(irow/stride) + j) = img(stride*(i-1) + 1:stride*(i-1)+window_size, stride*(j-1)+1:stride*(j-1)+window_size);
+        single_bbox_location((i-1)*floor(irow/stride) + j, :) = [(i-1)*stride+1,(j-1)*stride+1,window_r,window_c]; % top-left y,x, height, width
     end
 end
 
