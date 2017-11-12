@@ -47,9 +47,11 @@ Xva = []; Yva = [];
 
 load('./data/face_recognition/face_recognition_data_tr.mat')
 
+cellSize = 8;
 
 for i =1:length(tr_img_sample)
     temp = single(tr_img_sample{i,1})/255;
+    temp = vl_hog(temp, cellSize);
     Xtr = [Xtr;temp(:)'];
     Ytr = [Ytr;tr_img_sample{i,3}];
 end
@@ -58,6 +60,7 @@ end
 load('./data/face_recognition/face_recognition_data_va.mat')
 for i =1:length(va_img_sample)
     temp = single(va_img_sample{i,1})/255;
+    temp = vl_hog(temp, cellSize);
     Xva = [Xva;temp(:)'];
     Yva = [Yva;va_img_sample{i,3}];
 end
@@ -67,8 +70,14 @@ Xtr = double(Xtr);
 Xva = double(Xva);
 
 % Train the recognizer
-model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
+%model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
+%[l,prob] = predict(model,Xva);
+
+model = fitcecoc(Xtr,Ytr);
 [l,prob] = predict(model,Xva);
+
+%model = fitcsvm(Xtr,Ytr);
+%[l,prob] = predict(model,Xva);
 
 % Compute the accuracy
 acc = mean(l==Yva)*100;
@@ -118,9 +127,11 @@ load('./data/face_verification/face_verification_tr.mat')
 % You should construct the features in here. (read, resize, extract)
 for i =1:length(tr_img_pair)
     temp = single(tr_img_pair{i,1})/255;
+    temp = vl_hog(temp, cellSize);
     temp_Xtr1 = temp(:)';
     
     temp = single(tr_img_pair{i,3})/255;
+    temp = vl_hog(temp, cellSize);
     temp_Xtr2 = temp(:)';
     
     Xtr = [Xtr;temp_Xtr1-temp_Xtr2];
@@ -132,9 +143,11 @@ end
 load('./data/face_verification/face_verification_va.mat')
 for i =1:length(va_img_pair)
     temp = single(va_img_pair{i,1})/255;
+    temp = vl_hog(temp, cellSize);
     temp_Xva1 = temp(:)';
     
     temp = single(va_img_pair{i,3})/255;
+    temp = vl_hog(temp, cellSize);
     temp_Xva2 = temp(:)';
     
     Xva = [Xva;temp_Xva1-temp_Xva2];
@@ -145,7 +158,10 @@ Xva = double(Xva);
 
 
 % Train the recognizer and evaluate the performance
-model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
+%model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
+%[l,prob] = predict(model,Xva);
+
+model = fitcecoc(Xtr,Ytr);
 [l,prob] = predict(model,Xva);
 
 % Compute the accuracy
