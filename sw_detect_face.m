@@ -20,8 +20,8 @@ real_image = img;
 
 % single-scale sliding window
 [irow, icol] = size(img);
-window_size = int16(window_size / scale);
-stride = int16(stride / scale);
+% window_size = int16(window_size / scale);
+% stride = int16(stride / scale);
 window_r = window_size(1);
 window_c = window_size(2);
 

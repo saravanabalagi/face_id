@@ -19,6 +19,7 @@
 % - val_dir is the validation set of real images
 %==========================================================================
 clear all
+close all
 clc
 run ICV_setup
 % The relevant data directory
@@ -75,7 +76,7 @@ parfor i=1:nFace                     % Uncomment it to try parallel for-loop to 
     Xtr = [Xtr;temp(:)'];
 end
 
-disp(size(Xtr));
+% disp(size(Xtr));
 % imshow(reshape(Xtr(1,:),[64,64]));
 
 % load non_face_images
@@ -102,8 +103,8 @@ end
 
 % Create the labelled image
 Ytr = [ones(nFace,1);-1*ones(count,1)];
-disp(size(Xtr));
-disp(size(Ytr));
+% disp(size(Xtr));
+% disp(size(Ytr));
 
 %% Training the Face Detector
 %==========================================================================
@@ -158,13 +159,23 @@ for k=1:length(val_file)
     % Get the positive probability for proposed faces
     Xte = Xte';    
     [l,score] = predict(Mdl,Xte);
-    prob2 = score(:,1);
-    for probi = 1:1:length(prob2)
-        prob2(probi) = 1/(1 + exp(prob2(probi)));
-    end
+    prob2 = score(:,2);
+    
+%     prob2 = score(:,1);
+% %     mu = 0;
+% %     sigma = 0.1;
+%     for probi = 1:1:length(prob2)
+%         prob2(probi) = 1/(1 + exp(-1 * abs(prob2(probi))));
+% %         prob2(probi) = (-0.5 * (prob2(probi) - mu)/sigma) / (sigma * sqrt(2 * pi));
+%     end
+    
+%     prob2 = score(:,1);
+%     for probi = 1:1:length(prob2)
+%         prob2(probi) = 1/(1 + exp(prob2(probi)));
+%     end
     
 %     Setting a threshold to pick the proposed face images
-    threshold = 0.4;
+    threshold = 0.5;
     threshold_bbox=bbox_ms(prob2>threshold,:);
     prob3=prob2(prob2>threshold,:);
 
@@ -243,6 +254,13 @@ for k=1:length(val_file2)
 
         [~,score] = predict(Mdl,Xte);
         prob2 = score(:,2);
+        
+%         prob2 = score(:,1);
+%         for probi = 1:1:length(prob2)
+%             prob2(probi) = 1/(1 + exp(prob2(probi)));
+%         end
+        
+        
     
         % Getting the True positive, condition positive, predicted positive
         % number for evaluating the algorithm performance via Average 
