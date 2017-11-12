@@ -136,11 +136,9 @@ end
 load('./data/face_verification/face_verification_va.mat')
 for i =1:length(va_img_pair)
     temp = single(va_img_pair{i,1})/255;
-    temp = vl_hog(temp, cellSize);
     temp_Xva1 = temp(:)';
     
     temp = single(va_img_pair{i,3})/255;
-    temp = vl_hog(temp, cellSize);
     temp_Xva2 = temp(:)';
     
     Xva = [Xva;temp_Xva1-temp_Xva2];
@@ -151,7 +149,7 @@ Xva = double(Xva);
 
 
 % Train the recognizer and evaluate the performance
-model = fitcsvm(Xtr,Ytr);
+model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
 [l,prob] = predict(model,Xva);
 
 % Compute the accuracy
