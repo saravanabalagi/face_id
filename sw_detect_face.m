@@ -1,4 +1,4 @@
-function [ patches,bbox_location ] = sw_detect_face( img,window_size, scale,stride )
+function [patches, bbox_locations] = sw_detect_face(img, window_size, scale, stride)
 % sw_multiscale_detect_face
 % - This is a function to proposed the potential face images via moving the
 % sliding window. 
@@ -15,33 +15,42 @@ function [ patches,bbox_location ] = sw_detect_face( img,window_size, scale,stri
 %   - stride     : The steps between each save images
 %==========================================================================
 
-real_image = img;
-% img = imresize(img, scale);
+img = imresize(img, scale);
 
-% single-scale sliding window
-[irow, icol] = size(img);
-% window_size = int16(window_size / scale);
-% stride = int16(stride / scale);
-window_r = window_size(1);
-window_c = window_size(2);
+% Image dimensions
+[image_y, image_x] = size(img);
 
+% Window dimensions
+window_y = window_size(1);
+window_x = window_size(2);
 
+% Number of windows to return
+number_of_windows = floor(((image_y - window_y) / stride) + 1) * floor(((image_x - window_x) / stride) + 1);
 
-single_patches = zeros(window_r, window_c, floor(((irow-window_r)/stride) + 1) * floor(((icol-window_c)/stride) + 1), 'uint8');
-% single_patches = zeros(window_r, window_c,5, 'uint8');
+% Initialise patches and bounding box locations for speed
+s_patches = zeros(window_y, window_x, number_of_windows, 'uint8');
+s_bbox_locations = zeros(number_of_windows, 4, 'uint8');
+
+% Set count to 1, to keep track of the number of patches processed
+count = 1;
 
 % Iteratively save the patches.
-% r = randi(irow-window_r,5,1);
-% c = randi(icol-window_c,5,1);
-for i = 1:((irow-window_r)/stride) + 1 %1:irow/window_r
-    for j = 1:((icol-window_c)/stride) + 1%1:icol/window_c
-        single_patches(:,:,(i-1)*floor(irow/stride) + j) = img(stride*(i-1) + 1:stride*(i-1)+window_size, stride*(j-1)+1:stride*(j-1)+window_size);
-        single_bbox_location((i-1)*floor(irow/stride) + j, :) = [(i-1)*stride+1,(j-1)*stride+1,window_r,window_c]; % top-left y,x, height, width
+for y = 1:stride:image_y - window_y + 1
+    for x = 1:stride:image_x - window_x + 1
+        % Image patch at bbox location
+        s_patches(:,:,count) = img(y:y+window_y-1, x:x+window_x-1);
+        
+        % Bbox cords, top-left y, x, height, width
+        s_bbox_locations(count, :) = [int16(y / scale), int16(x / scale), int16(window_y / scale), int16(window_x / scale)];     
+        
+        % Iterate processed count
+        count = count + 1;
     end
 end
 
-patches{1} = single_patches;
-bbox_location{1} = single_bbox_location;
+% Set output
+patches{1} = s_patches;
+bbox_locations{1} = s_bbox_locations;
 
 end
 

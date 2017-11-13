@@ -142,8 +142,8 @@ for k=1:length(val_file)
     if size(img,3)>1, img = rgb2gray(img); end
     window_size=[64 64];
     
-    % You need to write your sliding window in this function. 
-    [patches,temp_bbox] = sw_detect_face(img,window_size,0.8,32);
+    [patches,temp_bbox] = sw_detect_face(img,window_size,1,32);
+    
     Xte=[];
     bbox_ms = [];
     % Extract the feature for each patch
@@ -174,7 +174,7 @@ for k=1:length(val_file)
 %         prob2(probi) = 1/(1 + exp(prob2(probi)));
 %     end
     
-%     Setting a threshold to pick the proposed face images
+%   Setting a threshold to pick the proposed face images
     threshold = 0.5;
     threshold_bbox=bbox_ms(prob2>threshold,:);
     prob3=prob2(prob2>threshold,:);
@@ -200,10 +200,9 @@ for k=1:length(val_file)
         'EdgeColor','r', 'LineWidth', 3)
     %======================================================================
     end
-    saveas(gcf, [val_file(k).name(1:end-4),'_sw64.png'])
+    saveas(gcf, ['scratch/', val_file(k).name(1:end-4), '_sw64.png'])
     clear Xte Yte
 end
-
 
 %% Evaluating your result on the val_datasets
 

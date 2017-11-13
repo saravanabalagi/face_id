@@ -1,0 +1,50 @@
+function [ patches,bbox_location ] = sw_detect_face(img, window_size, scale, stride)
+% sw_multiscale_detect_face
+% - This is a function to proposed the potential face images via moving the
+% sliding window. 
+%==========================================================================
+% Output:
+%   - patches: a cell to store every window_size proposed images. The size
+%               of save images are H*W*N, where N is the number of sliding
+%   - bbox_location: bounding box [x,y,height,width]
+%--------------------------------------------------------------------------
+% Input:
+%   - real_image : The original images without resize
+%   - window_size: The proposed sliding window size
+%   - scale      : The scale of for each original image
+%   - stride     : The steps between each save images
+%==========================================================================
+
+real_image = img;
+img = imresize(img, scale);
+
+% single-scale sliding window
+[irow, icol] = size(img);
+% window_size = int16(window_size / scale);
+% stride = int16(stride / scale);
+
+window_y = window_size(1);
+window_x = window_size(2);
+
+number_of_windows = floor(((irow-window_y)/stride) + 1) * floor(((icol-window_x)/stride) + 1);
+
+single_patches = zeros(window_y, window_x, number_of_windows, 'uint8');
+single_bbox_location = zeros(number_of_windows, 4, 'uint8');
+
+count = 1;
+
+% Iteratively save the patches.
+for y = 1:stride:irow+1-window_y
+    for x = 1:stride:icol+1-window_x
+        single_patches(:,:,count) = img(y:y+window_y-1, x:x+window_x-1); % Image patch at bbox location
+        single_bbox_location(count, :) = [y * scale, x * scale, window_y, window_x];     % Bbox cords, top-left y, x, height, width
+        count = count + 1;
+    end
+end
+
+% Pass through output
+patches{1} = single_patches;
+bbox_location{1} = single_bbox_location;
+
+end
+
