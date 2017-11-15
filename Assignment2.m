@@ -47,23 +47,43 @@ Xva = []; Yva = [];
 
 load('./data/face_recognition/face_recognition_data_tr.mat')
 
+%run matlab/vl_setupnn ;
+
 cellSize = 8;
 
 for i =1:length(tr_img_sample)
+    %foldername = strsplit(tr_img_sample{i,2}, '_')
+    %foldername = ['data/face_recognition/images/', foldername{1}, '_', foldername{2}]
+    %mkdir(foldername)
+    %imwrite(tr_img_sample{i,1}, [foldername, '/', tr_img_sample{i,2}, '.png']);
     temp = single(tr_img_sample{i,1})/255;
     temp = vl_hog(temp, cellSize);
     Xtr = [Xtr;temp(:)'];
+    %Xtr = (Xtr - mean(Xtr))/std(Xtr)
     Ytr = [Ytr;tr_img_sample{i,3}];
 end
 
 
 load('./data/face_recognition/face_recognition_data_va.mat')
 for i =1:length(va_img_sample)
+    %foldername = strsplit(va_img_sample{i,2}, '_')
+    %foldername = ['data/face_recognition/val_images/', foldername{1}, '_', foldername{2}]
+    %mkdir(foldername)
+    %imwrite(va_img_sample{i,1}, [foldername, '/', va_img_sample{i,2}, '.png']);
     temp = single(va_img_sample{i,1})/255;
     temp = vl_hog(temp, cellSize);
     Xva = [Xva;temp(:)'];
     Yva = [Yva;va_img_sample{i,3}];
 end
+
+%imset = imageSet('data/face_recognition/temp/', 'recursive');
+%val_imset = imageSet('data/face_recognition/val_temp/', 'recursive');
+
+%extractorFcn = @custom_extractor;
+
+%bag = bagOfFeatures(imset,'CustomExtractor', extractorFcn)
+
+%bag = bagOfFeatures(imset, 'VocabularySize', 50)
 
 %% Train the recognizer and evaluate the performance
 Xtr = double(Xtr);
@@ -72,6 +92,11 @@ Xva = double(Xva);
 % Train the recognizer
 %model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
 %[l,prob] = predict(model,Xva);
+
+%model = trainImageCategoryClassifier(imset, bag)
+%[l,prob] = predict(model, Xva);
+
+%evaluate(model, val_imset)
 
 model = fitcecoc(Xtr,Ytr);
 [l,prob] = predict(model,Xva);
@@ -126,6 +151,10 @@ load('./data/face_verification/face_verification_tr.mat')
 
 % You should construct the features in here. (read, resize, extract)
 for i =1:length(tr_img_pair)
+    %foldername = strsplit(tr_img_sample{i,2}, '_')
+    %foldername = ['data/face_recognition/images/', foldername{1}, '_', foldername{2}]
+    %mkdir(foldername)
+    %imwrite(tr_img_sample{i,1}, [foldername, '/', tr_img_sample{i,2}, '.png']);
     temp = single(tr_img_pair{i,1})/255;
     temp = vl_hog(temp, cellSize);
     temp_Xtr1 = temp(:)';
