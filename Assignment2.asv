@@ -47,30 +47,64 @@ Xva = []; Yva = [];
 
 load('./data/face_recognition/face_recognition_data_tr.mat')
 
+%run matlab/vl_setupnn ;
+
 cellSize = 8;
+
 for i =1:length(tr_img_sample)
+    %foldername = strsplit(tr_img_sample{i,2}, '_')
+    %foldername = ['data/face_recognition/images/', foldername{1}, '_', foldername{2}]
+    %mkdir(foldername)
+    %imwrite(tr_img_sample{i,1}, [foldername, '/', tr_img_sample{i,2}, '.png']);
     temp = single(tr_img_sample{i,1})/255;
-    temp = vl_hog(temp, cellSize);
-    Xtr = [Xtr;temp(:)'];
+    hog = vl_hog(temp, cellSize);
+    lbp = vl_lbp(temp, cellSize);
+    Xtr = [Xtr;[hog(:);lbp(:)]'];
+    %Xtr = (Xtr - mean(Xtr))/std(Xtr)
     Ytr = [Ytr;tr_img_sample{i,3}];
 end
 
 
 load('./data/face_recognition/face_recognition_data_va.mat')
 for i =1:length(va_img_sample)
+    %foldername = strsplit(va_img_sample{i,2}, '_')
+    %foldername = ['data/face_recognition/val_images/', foldername{1}, '_', foldername{2}]
+    %mkdir(foldername)
+    %imwrite(va_img_sample{i,1}, [foldername, '/', va_img_sample{i,2}, '.png']);
     temp = single(va_img_sample{i,1})/255;
-    temp = vl_hog(temp, cellSize);
-    Xva = [Xva;temp(:)'];
+    hog = vl_hog(temp, cellSize);
+    lbp = vl_lbp(temp, cellSize);
+    Xva = [Xva;[hog(:);lbp(:)]'];
     Yva = [Yva;va_img_sample{i,3}];
 end
+
+%imset = imageSet('data/face_recognition/temp/', 'recursive');
+%val_imset = imageSet('data/face_recognition/val_temp/', 'recursive');
+
+%extractorFcn = @custom_extractor;
+
+%bag = bagOfFeatures(imset,'CustomExtractor', extractorFcn)
+
+%bag = bagOfFeatures(imset, 'VocabularySize', 50)
 
 %% Train the recognizer and evaluate the performance
 Xtr = double(Xtr);
 Xva = double(Xva);
 
 % Train the recognizer
+%model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
+%[l,prob] = predict(model,Xva);
+
+%model = trainImageCategoryClassifier(imset, bag)
+%[l,prob] = predict(model, Xva);
+
+%evaluate(model, val_imset)
+
 model = fitcecoc(Xtr,Ytr);
 [l,prob] = predict(model,Xva);
+
+%model = fitcsvm(Xtr,Ytr);
+%[l,prob] = predict(model,Xva);
 
 % Compute the accuracy
 acc = mean(l==Yva)*100;
@@ -114,21 +148,52 @@ load('./data/face_verification/face_verification_tr.mat')
 % of the image. Similarly, the third dimension is another image and the
 % fourth dimension is the name of that image.
 % -Ytr/Yva: is the label of 'same' or 'different'
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%
 
+% All = [];
+
+All = zeros
 
 % You should construct the features in here. (read, resize, extract)
 for i =1:length(tr_img_pair)
+%     foldername = ['data/face_verification/images/', num2str(i)];
+%     mkdir(foldername);
+%     imwrite(tr_img_pair{i,1}, [foldername, '/', tr_img_pair{i,2}, '.png']);
+%     imwrite(tr_img_pair{i,3}, [foldername, '/', tr_img_pair{i,4}, '.png']);
+
     temp = single(tr_img_pair{i,1})/255;
-    temp = vl_hog(temp, cellSize);
-    temp_Xtr1 = temp(:)';
+    
+    All = [All;reshape(temp, 4096, [])];
+    
+%     temp = vl_lbp(temp, cellSize);
+%     temp_Xtr1 = temp(:)';
     
     temp = single(tr_img_pair{i,3})/255;
-    temp = vl_hog(temp, cellSize);
-    temp_Xtr2 = temp(:)';
     
-    Xtr = [Xtr;temp_Xtr1-temp_Xtr2];
+    All = [All;reshape(temp, 4096, [])];
+    
+%     temp = vl_lbp(temp, cellSize);
+%     temp_Xtr2 = temp(:)';
+%     
+%     Xtr = [Xtr;temp_Xtr1-temp_Xtr2];
 end
+
+size(All)
+
+% % steps 1 and 2: find the mean image and the mean-shifted input images
+% mean_face = mean(images, 2);
+% shifted_images = images - repmat(mean_face, 1, num_images);
+%  
+% % steps 3 and 4: calculate the ordered eigenvectors and eigenvalues
+% [evectors, score, evalues] = princomp(images');
+%  
+% % step 5: only retain the top 'num_eigenfaces' eigenvectors (i.e. the principal components)
+% num_eigenfaces = 20;
+% evectors = evectors(:, 1:num_eigenfaces);
+%  
+% % step 6: project the images into the subspace to generate the feature vectors
+% features = evectors' * shifted_images;
+
 
 % BoW visual representation (Or any other better representation)
 
@@ -136,20 +201,26 @@ end
 load('./data/face_verification/face_verification_va.mat')
 for i =1:length(va_img_pair)
     temp = single(va_img_pair{i,1})/255;
+    temp = vl_lbp(temp, cellSize);
     temp_Xva1 = temp(:)';
     
     temp = single(va_img_pair{i,3})/255;
+    temp = vl_lbp(temp, cellSize);
     temp_Xva2 = temp(:)';
     
     Xva = [Xva;temp_Xva1-temp_Xva2];
 end
 
+%% Train the verifier and evaluate the performance
 Xtr = double(Xtr);
 Xva = double(Xva);
 
 
 % Train the recognizer and evaluate the performance
-model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
+%model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
+%[l,prob] = predict(model,Xva);
+
+model = fitcecoc(Xtr,Ytr);
 [l,prob] = predict(model,Xva);
 
 % Compute the accuracy

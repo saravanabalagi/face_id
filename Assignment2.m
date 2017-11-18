@@ -148,25 +148,84 @@ load('./data/face_verification/face_verification_tr.mat')
 % of the image. Similarly, the third dimension is another image and the
 % fourth dimension is the name of that image.
 % -Ytr/Yva: is the label of 'same' or 'different'
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%
 
+All = [];
+
+% All = zeros(3600, 4096)
 
 % You should construct the features in here. (read, resize, extract)
 for i =1:length(tr_img_pair)
-    %foldername = strsplit(tr_img_sample{i,2}, '_')
-    %foldername = ['data/face_recognition/images/', foldername{1}, '_', foldername{2}]
-    %mkdir(foldername)
-    %imwrite(tr_img_sample{i,1}, [foldername, '/', tr_img_sample{i,2}, '.png']);
+%     foldername = ['data/face_verification/images/', num2str(i)];
+%     mkdir(foldername);
+%     imwrite(tr_img_pair{i,1}, [foldername, '/', tr_img_pair{i,2}, '.png']);
+%     imwrite(tr_img_pair{i,3}, [foldername, '/', tr_img_pair{i,4}, '.png']);
+
     temp = single(tr_img_pair{i,1})/255;
-    temp = vl_lbp(temp, cellSize);
-    temp_Xtr1 = temp(:)';
+    
+    All = [All reshape(temp, 4096, 1)];
+    
+%     temp = vl_lbp(temp, cellSize);
+%     temp_Xtr1 = temp(:)';
     
     temp = single(tr_img_pair{i,3})/255;
-    temp = vl_lbp(temp, cellSize);
-    temp_Xtr2 = temp(:)';
     
-    Xtr = [Xtr;temp_Xtr1-temp_Xtr2];
+    All = [All reshape(temp, 4096, 1)];
+    
+%     temp = vl_lbp(temp, cellSize);
+%     temp_Xtr2 = temp(:)';
+%     
+%     Xtr = [Xtr;temp_Xtr1-temp_Xtr2];
 end
+
+% Calculates mean value
+m = mean(All, 2);
+
+Train_Number = size(All, 2);
+
+% Calculates the deviation of each image from the mean image
+A = [ ];  
+
+for i = 1 : length(tr_img_pair) * 2
+    temp = double(All(:,i)) - m; 
+    A = [A temp];
+end
+
+% Create covariance matrix
+L = A'*A;
+
+% Calculate eigen values and eigen vector V-eigen vector D-diagonal matrix with eigen values
+[V D] = eig(L); 
+
+L_eig_vec = [];
+
+for i = 1 : size(V,2) 
+
+    if( D(i,i)>1 )
+
+        L_eig_vec = [L_eig_vec V(:,i)];
+    end
+end
+
+% Eigenvectors of covariance matrix C (or so-called "Eigenfaces") can be recovered from L's eiegnvectors.
+Eigenfaces = A * L_eig_vec;
+
+% imshow(reshape(Eigenfaces(1,:),[64,64]));
+
+% % steps 1 and 2: find the mean image and the mean-shifted input images
+% mean_face = mean(images, 2);
+% shifted_images = images - repmat(mean_face, 1, num_images);
+%  
+% % steps 3 and 4: calculate the ordered eigenvectors and eigenvalues
+% [evectors, score, evalues] = princomp(images');
+%  
+% % step 5: only retain the top 'num_eigenfaces' eigenvectors (i.e. the principal components)
+% num_eigenfaces = 20;
+% evectors = evectors(:, 1:num_eigenfaces);
+%  
+% % step 6: project the images into the subspace to generate the feature vectors
+% features = evectors' * shifted_images;
+
 
 % BoW visual representation (Or any other better representation)
 
