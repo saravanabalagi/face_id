@@ -57,8 +57,9 @@ for i =1:length(tr_img_sample)
     %mkdir(foldername)
     %imwrite(tr_img_sample{i,1}, [foldername, '/', tr_img_sample{i,2}, '.png']);
     temp = single(tr_img_sample{i,1})/255;
-    temp = vl_hog(temp, cellSize);
-    Xtr = [Xtr;temp(:)'];
+    hog = vl_hog(temp, cellSize);
+    lbp = vl_lbp(temp, cellSize);
+    Xtr = [Xtr;[hog(:);lbp(:)]'];
     %Xtr = (Xtr - mean(Xtr))/std(Xtr)
     Ytr = [Ytr;tr_img_sample{i,3}];
 end
@@ -71,8 +72,9 @@ for i =1:length(va_img_sample)
     %mkdir(foldername)
     %imwrite(va_img_sample{i,1}, [foldername, '/', va_img_sample{i,2}, '.png']);
     temp = single(va_img_sample{i,1})/255;
-    temp = vl_hog(temp, cellSize);
-    Xva = [Xva;temp(:)'];
+    hog = vl_hog(temp, cellSize);
+    lbp = vl_lbp(temp, cellSize);
+    Xva = [Xva;[hog(:);lbp(:)]'];
     Yva = [Yva;va_img_sample{i,3}];
 end
 
@@ -156,11 +158,11 @@ for i =1:length(tr_img_pair)
     %mkdir(foldername)
     %imwrite(tr_img_sample{i,1}, [foldername, '/', tr_img_sample{i,2}, '.png']);
     temp = single(tr_img_pair{i,1})/255;
-    temp = vl_hog(temp, cellSize);
+    temp = vl_lbp(temp, cellSize);
     temp_Xtr1 = temp(:)';
     
     temp = single(tr_img_pair{i,3})/255;
-    temp = vl_hog(temp, cellSize);
+    temp = vl_lbp(temp, cellSize);
     temp_Xtr2 = temp(:)';
     
     Xtr = [Xtr;temp_Xtr1-temp_Xtr2];
@@ -172,16 +174,17 @@ end
 load('./data/face_verification/face_verification_va.mat')
 for i =1:length(va_img_pair)
     temp = single(va_img_pair{i,1})/255;
-    temp = vl_hog(temp, cellSize);
+    temp = vl_lbp(temp, cellSize);
     temp_Xva1 = temp(:)';
     
     temp = single(va_img_pair{i,3})/255;
-    temp = vl_hog(temp, cellSize);
+    temp = vl_lbp(temp, cellSize);
     temp_Xva2 = temp(:)';
     
     Xva = [Xva;temp_Xva1-temp_Xva2];
 end
 
+%% Train the verifier and evaluate the performance
 Xtr = double(Xtr);
 Xva = double(Xva);
 
