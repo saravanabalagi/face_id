@@ -64,16 +64,17 @@ disp('Extracting features...')
 cellSize = 8;
 Xtr = [];
 % Read and Resize the face images. Extract the features here.
-nFace = 250; 
-% nFace = length(face_images_dir);  % Uncomment it to get more training data
+% nFace = 250; 
+nFace = length(face_images_dir);  % Uncomment it to get more training data
 parfor i=1:nFace                     % Uncomment it to try parallel for-loop to speed up the experiments
 % for i=1:nFace
     temp = imresize(imread([images_dir{1},face_images_dir(i).name]),resize_size);   
     temp = single(temp)/255;
-    temp = vl_hog(temp, cellSize);
+    hog = vl_hog(temp, cellSize);
+    lbp = vl_lbp(temp, cellSize);
 %     rendered = vl_hog('render', temp);
 %     imshow(rendered);
-    Xtr = [Xtr;temp(:)'];
+    Xtr = [Xtr;[hog(:);lbp(:)]'];
 end
 
 % disp(size(Xtr));
@@ -87,17 +88,18 @@ imset = imageSet(images_dir{2}, 'recursive');
 
 % Read and Resize the non-face images. Extract the features here.
 for i=1:length(imset)
-   parfor j = 1:min(imset(i).Count, 250)     % Uncomment it to get more training data
+   parfor j = 1:imset(i).Count     % Uncomment it to get more training data
 %    parfor j = 1:imset(i).Count     % Uncomment it to get more training data
 %     for j = 1:min(imset(i).Count,5)
         count = count+1;
         temp = imresize(read(imset(i),j),resize_size);
         if size(temp,3)>1, temp = rgb2gray(temp); end
         temp = single(temp)/255;
-        temp = vl_hog(temp, cellSize);
+        hog = vl_hog(temp, cellSize);
+        lbp = vl_lbp(temp, cellSize);
         %     rendered = vl_hog('render', temp);
         %     imshow(rendered);
-        Xtr = [Xtr;temp(:)'];
+        Xtr = [Xtr;[hog(:);lbp(:)]'];
     end
 end
 
@@ -150,8 +152,9 @@ for k=1:length(val_file)
     for p=1:length(patches)
         for j = 1:size(patches{p},3)
             face_img = single(patches{p}(:,:,j))/255;
-            face_img = vl_hog(face_img, cellSize);
-            Xte = [Xte face_img(:)];
+            hog = vl_hog(face_img, cellSize);
+            lbp = vl_lbp(face_img, cellSize);
+            Xte = [Xte [hog(:);lbp(:)]];
             bbox_ms = [bbox_ms;temp_bbox{p}(j,:)];
         end
     end
@@ -239,8 +242,9 @@ for k=1:length(val_file2)
         for p=1:length(patches)
             for j = 1:size(patches{p},3)
                 face_img = single(patches{p}(:,:,j))/255;
-                face_img = vl_hog(face_img, cellSize);
-                Xte = [Xte face_img(:)];
+                hog = vl_hog(face_img, cellSize);
+                lbp = vl_lbp(face_img, cellSize);
+                Xte = [Xte [hog(:);lbp(:)]];
                 bbox_ms = [bbox_ms;temp_bbox{p}(j,:)];
             end
         end

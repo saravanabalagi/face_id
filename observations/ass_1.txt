@@ -1,0 +1,3 @@
+Features	AP			FinalPrecision
+lbp + hog	0.86374		
+hog alone 	0.77788		0.5398
