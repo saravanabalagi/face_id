@@ -113,19 +113,23 @@ for i =1:length(va_img_sample)
     Yva = [Yva;va_img_sample{i,3}];
 end
 
+
+
 % Xdata = cat(1, Xtr, Xva);
 % Ydata = cat(1, Ytr, Yva);
 
-% [coeff,score,latent,~,explained] = pca(Xtr,'NumComponents',1000);
-% Xcentered = score*coeff';
-% 
-% Xtr = bsxfun(@minus,Xtr,mean(Xtr));
-% Xva = bsxfun(@minus,Xva,mean(Xva));
-% 
-% Xtr = score;
-% Xva = Xva*coeff;
+[coeff,score,latent,~,explained] = pca(Xtr,'NumComponents',200);
+Xcentered = score*coeff';
+
+Xtr = bsxfun(@minus,Xtr,mean(Xtr));
+Xva = bsxfun(@minus,Xva,mean(Xva));
+
+Xtr = score;
+Xva = Xva*coeff;
 
 % biplot(coeff(:,1:2),'scores',score(:,1:2),'varlabels',{'v_1','v_2','v_3','v_4'});
+
+disp('Finished feature extraction.')
 
 %%
 
@@ -146,6 +150,7 @@ end
 % acc = mean(l==Yva)*100;
 % 
 % fprintf('The accuracy of face recognition is:%.2f \n', acc)
+
 
 %%
 

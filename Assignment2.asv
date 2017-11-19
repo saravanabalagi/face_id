@@ -50,14 +50,8 @@ load('./data/face_recognition/face_recognition_data_tr.mat')
 cellSize = 8;
 
 imset = imageSet('data/face_recognition/images/', 'recursive');
-
-for i=1:length(training)
-    for j=1:training(i).Count
-    (training(i),j)=normalisation(read(training(i),j));
-    end
-end
        
-bag = bagOfFeatures(imset, 'VocabularySize', 500);
+bag = bagOfFeatures(imset, 'VocabularySize', 250);
 
 
 Ytr2 = zeros(368, 35);
@@ -69,7 +63,7 @@ for i =1:length(tr_img_sample)
     foldername = strsplit(tr_img_sample{i,2}, '_');
     foldername = ['data/face_recognition/images/', foldername{1}, '_', foldername{2}];
     mkdir(foldername);
-    imwrite(tr_img_sample{i,1}, [foldername, '/', tr_img_sample{i,2}, '.png']);
+    imwrite(temp, [foldername, '/', tr_img_sample{i,2}, '.png']);
     
     img = imread([foldername, '/', tr_img_sample{i,2}, '.png']);
     featureVector = encode(bag, img);
@@ -103,7 +97,7 @@ for i =1:length(va_img_sample)
     foldername = strsplit(va_img_sample{i,2}, '_');
     foldername = ['data/face_recognition/val_images/', foldername{1}, '_', foldername{2}];
     mkdir(foldername);
-    imwrite(va_img_sample{i,1}, [foldername, '/', va_img_sample{i,2}, '.png']);
+    imwrite(temp, [foldername, '/', va_img_sample{i,2}, '.png']);
     
     img = imread([foldername, '/', va_img_sample{i,2}, '.png']);
     featureVector = encode(bag, img);
@@ -119,19 +113,23 @@ for i =1:length(va_img_sample)
     Yva = [Yva;va_img_sample{i,3}];
 end
 
+
+
 % Xdata = cat(1, Xtr, Xva);
 % Ydata = cat(1, Ytr, Yva);
 
-% [coeff,score,latent,~,explained] = pca(Xtr,'NumComponents',1000);
-% Xcentered = score*coeff';
-% 
-% Xtr = bsxfun(@minus,Xtr,mean(Xtr));
-% Xva = bsxfun(@minus,Xva,mean(Xva));
-% 
-% Xtr = score;
-% Xva = Xva*coeff;
+[coeff,score,latent,~,explained] = pca(Xtr,'NumComponents',300);
+Xcentered = score*coeff';
+
+Xtr = bsxfun(@minus,Xtr,mean(Xtr));
+Xva = bsxfun(@minus,Xva,mean(Xva));
+
+Xtr = score;
+Xva = Xva*coeff;
 
 % biplot(coeff(:,1:2),'scores',score(:,1:2),'varlabels',{'v_1','v_2','v_3','v_4'});
+
+disp('Finished feature extraction.')
 
 %%
 
@@ -152,6 +150,7 @@ end
 % acc = mean(l==Yva)*100;
 % 
 % fprintf('The accuracy of face recognition is:%.2f \n', acc)
+
 
 %%
 
