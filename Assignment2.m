@@ -47,61 +47,134 @@ Xva = []; Yva = [];
 
 load('./data/face_recognition/face_recognition_data_tr.mat')
 
-%run matlab/vl_setupnn ;
-
 cellSize = 8;
 
+Ytr2 = zeros(368, 35);
+A = {};
+
 for i =1:length(tr_img_sample)
-    %foldername = strsplit(tr_img_sample{i,2}, '_')
-    %foldername = ['data/face_recognition/images/', foldername{1}, '_', foldername{2}]
-    %mkdir(foldername)
-    %imwrite(tr_img_sample{i,1}, [foldername, '/', tr_img_sample{i,2}, '.png']);
     temp = single(tr_img_sample{i,1})/255;
-    hog = vl_hog(temp, cellSize);
-    lbp = vl_lbp(temp, cellSize);
-    Xtr = [Xtr;[hog(:);lbp(:)]'];
-    %Xtr = (Xtr - mean(Xtr))/std(Xtr)
+    Xtr = [Xtr;temp(:)'];
+    A{end+1} = temp;
+%     hog = vl_hog(temp, cellSize);
+%     lbp = vl_lbp(temp, cellSize);
+%     Xtr = [Xtr;[hog(:);lbp(:)]'];
+%     Xtr = [Xtr;lbp(:)'];
+% 
+%     temp2 = zeros(35);
+%     temp2(tr_img_sample{i,3}) = 1;
+%     Ytr = [Ytr;temp2];
+    Ytr2(i, tr_img_sample{i,3}) = 1;
     Ytr = [Ytr;tr_img_sample{i,3}];
 end
 
 
 load('./data/face_recognition/face_recognition_data_va.mat')
+
+% Yva = zeros(111, 35);
+
+B = {};
+
 for i =1:length(va_img_sample)
-    %foldername = strsplit(va_img_sample{i,2}, '_')
-    %foldername = ['data/face_recognition/val_images/', foldername{1}, '_', foldername{2}]
-    %mkdir(foldername)
-    %imwrite(va_img_sample{i,1}, [foldername, '/', va_img_sample{i,2}, '.png']);
     temp = single(va_img_sample{i,1})/255;
-    hog = vl_hog(temp, cellSize);
-    lbp = vl_lbp(temp, cellSize);
-    Xva = [Xva;[hog(:);lbp(:)]'];
+    Xva = [Xva;temp(:)'];
+    B{end+1} = temp;
+%     A{end+1} = temp;
+%     hog = vl_hog(temp, cellSize);
+%     lbp = vl_lbp(temp, cellSize);
+%     Xva = [Xva;[hog(:);lbp(:)]'];
+%     Xva = [Xva;lbp(:)'];
+%     Yva(i, tr_img_sample{i,3}) = 1;
     Yva = [Yva;va_img_sample{i,3}];
 end
 
-%imset = imageSet('data/face_recognition/temp/', 'recursive');
-%val_imset = imageSet('data/face_recognition/val_temp/', 'recursive');
+% Xdata = cat(1, Xtr, Xva);
+% Ydata = cat(1, Ytr, Yva);
 
-%extractorFcn = @custom_extractor;
+% [coeff,score,latent,~,explained] = pca(Xtr,'NumComponents',1000);
+% Xcentered = score*coeff';
+% 
+% Xtr = bsxfun(@minus,Xtr,mean(Xtr));
+% Xva = bsxfun(@minus,Xva,mean(Xva));
+% 
+% Xtr = score;
+% Xva = Xva*coeff;
 
-%bag = bagOfFeatures(imset,'CustomExtractor', extractorFcn)
+% biplot(coeff(:,1:2),'scores',score(:,1:2),'varlabels',{'v_1','v_2','v_3','v_4'});
 
-%bag = bagOfFeatures(imset, 'VocabularySize', 50)
+%%
+
+rng('default')
+hiddenSize1 = 64;
+
+autoenc1 = trainAutoencoder(A,hiddenSize1, ...
+    'MaxEpochs',400, ...
+    'L2WeightRegularization',0.004, ...
+    'SparsityRegularization',4, ...
+    'SparsityProportion',0.15, ...
+    'ScaleData', false, ...
+    'UseGPU',true);
+
+view(autoenc1)
+figure()
+plotWeights(autoenc1);
+
+
+feat1 = encode(autoenc1,A);
+
+%%
+
+hiddenSize2 = 50;
+autoenc2 = trainAutoencoder(feat1,hiddenSize2, ...
+    'MaxEpochs',100, ...
+    'L2WeightRegularization',0.002, ...
+    'SparsityRegularization',4, ...
+    'SparsityProportion',0.1, ...
+    'ScaleData', false);
+
+view(autoenc2)
+feat2 = encode(autoenc2,feat1);
+
+%%
+
+softnet = trainSoftmaxLayer(feat2,Ytr2','MaxEpochs',400);
+
+view(softnet)
+
+%%
+
+deepnet = stack(autoenc1,autoenc2,softnet);
+view(deepnet)
+
+%%
+
+xTest = zeros(4096,numel(B));
+for i = 1:numel(B)
+    xTest(:,i) = B{i}(:);
+end
+
+%%
+
+y = deepnet(xTest);
+plotconfusion(Yva',y);
 
 %% Train the recognizer and evaluate the performance
 Xtr = double(Xtr);
 Xva = double(Xva);
 
 % Train the recognizer
-%model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
-%[l,prob] = predict(model,Xva);
+% model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
+% [l,prob] = predict(model,Xva);
 
 %model = trainImageCategoryClassifier(imset, bag)
 %[l,prob] = predict(model, Xva);
 
 %evaluate(model, val_imset)
 
-model = fitcecoc(Xtr,Ytr);
-[l,prob] = predict(model,Xva);
+p = encode(autoenc1,B);
+
+model = fitcecoc(feat1',Ytr);
+[l,prob] = predict(model,p');
 
 %model = fitcsvm(Xtr,Ytr);
 %[l,prob] = predict(model,Xva);
@@ -112,6 +185,10 @@ acc = mean(l==Yva)*100;
 fprintf('The accuracy of face recognition is:%.2f \n', acc)
 % Check your result on the raw images and try to analyse the limits of the
 % current method.
+
+return
+
+
 
 
 %% Visualization the result of face recognition
@@ -150,9 +227,7 @@ load('./data/face_verification/face_verification_tr.mat')
 % -Ytr/Yva: is the label of 'same' or 'different'
 %%%%%%%%%%%%%%%%%
 
-All = [];
-
-% All = zeros(3600, 4096)
+Ytr2 = zeros(1800,2);
 
 % You should construct the features in here. (read, resize, extract)
 for i =1:length(tr_img_pair)
@@ -163,68 +238,19 @@ for i =1:length(tr_img_pair)
 
     temp = single(tr_img_pair{i,1})/255;
     
-    All = [All reshape(temp, 4096, 1)];
-    
-%     temp = vl_lbp(temp, cellSize);
-%     temp_Xtr1 = temp(:)';
+    temp = vl_lbp(temp, cellSize);
+    temp_Xtr1 = temp(:)';
     
     temp = single(tr_img_pair{i,3})/255;
     
-    All = [All reshape(temp, 4096, 1)];
+    temp = vl_lbp(temp, cellSize);
+    temp_Xtr2 = temp(:)';
     
-%     temp = vl_lbp(temp, cellSize);
-%     temp_Xtr2 = temp(:)';
-%     
-%     Xtr = [Xtr;temp_Xtr1-temp_Xtr2];
+    index = min(Ytr(i) + 2, 2)
+    Ytr2(i, index) = 1;
+    
+    Xtr = [Xtr;temp_Xtr1-temp_Xtr2];
 end
-
-% Calculates mean value
-m = mean(All, 2);
-
-Train_Number = size(All, 2);
-
-% Calculates the deviation of each image from the mean image
-A = [ ];  
-
-for i = 1 : length(tr_img_pair) * 2
-    temp = double(All(:,i)) - m; 
-    A = [A temp];
-end
-
-% Create covariance matrix
-L = A'*A;
-
-% Calculate eigen values and eigen vector V-eigen vector D-diagonal matrix with eigen values
-[V D] = eig(L); 
-
-L_eig_vec = [];
-
-for i = 1 : size(V,2) 
-
-    if( D(i,i)>1 )
-
-        L_eig_vec = [L_eig_vec V(:,i)];
-    end
-end
-
-% Eigenvectors of covariance matrix C (or so-called "Eigenfaces") can be recovered from L's eiegnvectors.
-Eigenfaces = A * L_eig_vec;
-
-% imshow(reshape(Eigenfaces(1,:),[64,64]));
-
-% % steps 1 and 2: find the mean image and the mean-shifted input images
-% mean_face = mean(images, 2);
-% shifted_images = images - repmat(mean_face, 1, num_images);
-%  
-% % steps 3 and 4: calculate the ordered eigenvectors and eigenvalues
-% [evectors, score, evalues] = princomp(images');
-%  
-% % step 5: only retain the top 'num_eigenfaces' eigenvectors (i.e. the principal components)
-% num_eigenfaces = 20;
-% evectors = evectors(:, 1:num_eigenfaces);
-%  
-% % step 6: project the images into the subspace to generate the feature vectors
-% features = evectors' * shifted_images;
 
 
 % BoW visual representation (Or any other better representation)
