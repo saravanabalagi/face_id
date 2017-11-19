@@ -49,22 +49,38 @@ load('./data/face_recognition/face_recognition_data_tr.mat')
 
 cellSize = 8;
 
+imset = imageSet('data/face_recognition/images/', 'recursive');
+       
+bag = bagOfFeatures(imset, 'VocabularySize', 250);
+
+
 Ytr2 = zeros(368, 35);
 A = {};
 
 for i =1:length(tr_img_sample)
     temp = single(tr_img_sample{i,1})/255;
-    Xtr = [Xtr;temp(:)'];
-    A{end+1} = temp;
-%     hog = vl_hog(temp, cellSize);
-%     lbp = vl_lbp(temp, cellSize);
-%     Xtr = [Xtr;[hog(:);lbp(:)]'];
+    
+    foldername = strsplit(tr_img_sample{i,2}, '_');
+    foldername = ['data/face_recognition/images/', foldername{1}, '_', foldername{2}];
+    mkdir(foldername);
+    imwrite(temp, [foldername, '/', tr_img_sample{i,2}, '.png']);
+    
+    img = imread([foldername, '/', tr_img_sample{i,2}, '.png']);
+    featureVector = encode(bag, img);
+    
+    
+%     Xtr = [Xtr;temp(:)'];
+%     A{end+1} = temp;
+
+    hog = vl_hog(temp, cellSize);
+    lbp = vl_lbp(temp, cellSize);
+    Xtr = [Xtr;[hog(:);lbp(:);featureVector(:)]'];
 %     Xtr = [Xtr;lbp(:)'];
-% 
+
 %     temp2 = zeros(35);
 %     temp2(tr_img_sample{i,3}) = 1;
 %     Ytr = [Ytr;temp2];
-    Ytr2(i, tr_img_sample{i,3}) = 1;
+%     Ytr2(i, tr_img_sample{i,3}) = 1;
     Ytr = [Ytr;tr_img_sample{i,3}];
 end
 
@@ -77,12 +93,21 @@ B = {};
 
 for i =1:length(va_img_sample)
     temp = single(va_img_sample{i,1})/255;
-    Xva = [Xva;temp(:)'];
-    B{end+1} = temp;
-%     A{end+1} = temp;
-%     hog = vl_hog(temp, cellSize);
-%     lbp = vl_lbp(temp, cellSize);
-%     Xva = [Xva;[hog(:);lbp(:)]'];
+    
+    foldername = strsplit(va_img_sample{i,2}, '_');
+    foldername = ['data/face_recognition/val_images/', foldername{1}, '_', foldername{2}];
+    mkdir(foldername);
+    imwrite(temp, [foldername, '/', va_img_sample{i,2}, '.png']);
+    
+    img = imread([foldername, '/', va_img_sample{i,2}, '.png']);
+    featureVector = encode(bag, img);
+
+%     Xva = [Xva;temp(:)'];
+%     B{end+1} = temp;
+
+    hog = vl_hog(temp, cellSize);
+    lbp = vl_lbp(temp, cellSize);
+    Xva = [Xva;[hog(:);lbp(:);featureVector(:) ]'];
 %     Xva = [Xva;lbp(:)'];
 %     Yva(i, tr_img_sample{i,3}) = 1;
     Yva = [Yva;va_img_sample{i,3}];
@@ -101,6 +126,26 @@ end
 % Xva = Xva*coeff;
 
 % biplot(coeff(:,1:2),'scores',score(:,1:2),'varlabels',{'v_1','v_2','v_3','v_4'});
+
+%%
+
+% imset = imageSet('data/face_recognition/images/', 'recursive');
+% 
+% bag = bagOfFeatures(imset, 'VocabularySize', 250, 'PointSelection', 'Grid', 'GridStep', [8,8], 'BlockWidth', [32 64 96 128]);
+
+% categoryClassifier = trainImageCategoryClassifier(imset, bag);
+% 
+% confMatrix = evaluate(categoryClassifier, imset);
+% 
+% mean(diag(confMatrix));
+% 
+% val_imset = imageSet('data/face_recognition/val_images/', 'recursive');
+% 
+% [l, scores] = predict(categoryClassifier, val_imset);
+% 
+% acc = mean(l==Yva)*100;
+% 
+% fprintf('The accuracy of face recognition is:%.2f \n', acc)
 
 %%
 
@@ -171,10 +216,13 @@ Xva = double(Xva);
 
 %evaluate(model, val_imset)
 
-p = encode(autoenc1,B);
+% p = encode(autoenc1,B);
+% 
+% model = fitcecoc(feat1',Ytr);
+% [l,prob] = predict(model,p');
 
-model = fitcecoc(feat1',Ytr);
-[l,prob] = predict(model,p');
+model = fitcecoc(Xtr, Ytr);
+[l,prob] = predict(model, Xva);
 
 %model = fitcsvm(Xtr,Ytr);
 %[l,prob] = predict(model,Xva);

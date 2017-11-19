@@ -2,3 +2,11 @@
 scratch/*
 
 data/face_verification/images/
+
+data/face_detection/cropped_faces/
+
+data/face_detection/non_faces_images/
+
+data/face_detection/val_raw_images/
+
+data/face_recognition/images/
