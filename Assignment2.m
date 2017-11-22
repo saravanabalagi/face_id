@@ -340,11 +340,11 @@ visualise_recognition(va_img_sample,prob,Yva,data_idx,nSample )
 
 disp('Verification:Extracting features..')
 
-
+cellSize = 8;
 Xtr = [];
 Xva = [];
 load('./data/face_verification/face_verification_tr.mat')
-
+load('./data/face_verification/face_verification_va.mat')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Loading the training data
 % -tr_img_pair/va_img_pair:
@@ -357,8 +357,22 @@ load('./data/face_verification/face_verification_tr.mat')
 
 % Ytr2 = zeros(1800,2);
 
+nn_1_train = [];
+nn_2_train = [];
+nn_1_val = [];
+nn_2_val = [];
 
-%%
+lbp_1_train = [];
+lbp_2_train = [];
+lbp_1_val = [];
+lbp_2_val = [];
+
+hog_1_train = [];
+hog_2_train = [];
+hog_1_val = [];
+hog_2_val = [];
+
+%% Extract Features
 
 h = waitbar(0,'Name','Extracting features...','Initializing waitbar...');
 
@@ -371,27 +385,44 @@ for i =1:length(tr_img_pair)
 %     
 %     img1 = imread([foldername, '/', tr_img_pair{i,2}, '.png']);
 %     img2 = imread([foldername, '/', tr_img_pair{i,4}, '.png']);
-
-
-
+    
+    % First Image
+    
     im_ = single(tr_img_pair{i,1}) ; % note: 255 range
     im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
     im_ = bsxfun(@minus,im_,net.meta.normalization.averageImage) ;
     res = vl_simplenn(net, im_) ;
     output1 = squeeze(res(37).x);
     output1 = output1./norm(output1,2);
+    nn_1_train = [nn_1_train; output1(:)'];
     
+    temp = single(tr_img_pair{i,1})/255;
+    lbp_1 = vl_lbp(temp, cellSize);
+    lbp_1_train = [lbp_1_train; lbp_1(:)'];
+    hog_1 = vl_hog(temp, cellSize);
+    hog_1_train = [hog_1_train; hog_1(:)'];
+    
+    % Second Image
+
     im_ = single(tr_img_pair{i,3}) ; % note: 255 range
     im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
     im_ = bsxfun(@minus,im_,net.meta.normalization.averageImage) ;
     res = vl_simplenn(net, im_) ;
     output2 = squeeze(res(37).x);
     output2 = output2./norm(output2,2);
+    nn_2_train = [nn_2_train; output2(:)'];
     
-    Xtr = [Xtr;output1(:)' - output2(:)'];
+    temp = single(tr_img_pair{i,3})/255;
+    lbp_2 = vl_lbp(temp, cellSize);
+    lbp_2_train = [lbp_2_train; lbp_2(:)'];
+    hog_2 = vl_hog(temp, cellSize);
+    hog_2_train = [hog_2_train; hog_2(:)'];
+    
+%     diff = output1' - output2';
+%     Xtr = [Xtr;diff];
     
     perc = (i * 100) / (length(tr_img_pair) + length(va_img_pair));
-    waitbar(perc,h,sprintf('%0.5f%%  Complete',perc))
+    waitbar(perc/100,h,sprintf('%0.5f%%  Complete',perc))
 
 %     temp = single(tr_img_pair{i,1})/255;
 %     
@@ -413,7 +444,7 @@ end
 % BoW visual representation (Or any other better representation)
 
 
-load('./data/face_verification/face_verification_va.mat')
+% load('./data/face_verification/face_verification_va.mat')
 for i =1:length(va_img_pair)
 %     foldername = ['data/face_verification/val_images/', num2str(i)];
 %     mkdir(foldername);
@@ -423,21 +454,39 @@ for i =1:length(va_img_pair)
 %     img1 = imread([foldername, '/', va_img_pair{i,2}, '.png']);
 %     img2 = imread([foldername, '/', va_img_pair{i,4}, '.png']);
 
+    % First Image
+    
     im_ = single(va_img_pair{i,1}) ; % note: 255 range
     im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
     im_ = bsxfun(@minus,im_,net.meta.normalization.averageImage) ;
     res = vl_simplenn(net, im_) ;
     output1 = squeeze(res(37).x);
     output1 = output1./norm(output1,2);
+    nn_1_val = [nn_1_val; output1(:)'];
     
+    temp = single(va_img_pair{i,1})/255;
+    lbp_1 = vl_lbp(temp, cellSize);
+    lbp_1_val = [lbp_1_val; lbp_1(:)'];
+    hog_1 = vl_hog(temp, cellSize);
+    hog_1_val = [hog_1_val; hog_1(:)'];
+    
+    % Second Image
+
     im_ = single(va_img_pair{i,3}) ; % note: 255 range
     im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
     im_ = bsxfun(@minus,im_,net.meta.normalization.averageImage) ;
     res = vl_simplenn(net, im_) ;
     output2 = squeeze(res(37).x);
     output2 = output2./norm(output2,2);
+    nn_2_val = [nn_2_val; output2(:)'];
     
-    Xtr = [Xtr;output1(:)' - output2(:)'];
+    temp = single(va_img_pair{i,3})/255;
+    lbp_2 = vl_lbp(temp, cellSize);
+    lbp_2_val = [lbp_2_val; lbp_2(:)'];
+    hog_2 = vl_hog(temp, cellSize);
+    hog_2_val = [hog_2_val; hog_2(:)'];
+    
+%     Xva = [Xva;diff];
     
     perc = ((length(tr_img_pair) + i) * 100) / (length(tr_img_pair) + length(va_img_pair));
     waitbar(perc,h,sprintf('%0.5f%%  Complete',perc))
@@ -452,17 +501,38 @@ for i =1:length(va_img_pair)
 %     
 %     Xva = [Xva;temp_Xva1-temp_Xva2];
 end
+%% Build data for training from extracted features
 
-%% Train the verifier and evaluate the performance
+% Xtr = [nn_1_train-nn_2_train lbp_1_train-lbp_2_train hog_1_train-hog_2_train];
+% Xva = [nn_1_val-nn_2_val lbp_1_val-lbp_2_val hog_1_val-hog_2_val];
+
+% Xtr = [nn_1_train-nn_2_train lbp_1_train-lbp_2_train];
+% Xva = [nn_1_val-nn_2_val lbp_1_val-lbp_2_val];
+
+% Xtr = [nn_1_train-nn_2_train];
+% Xva = [nn_1_val-nn_2_val];
+
+Xtr = [lbp_1_train-lbp_2_train];
+Xva = [lbp_1_val-lbp_2_val];
+
 Xtr = double(Xtr);
 Xva = double(Xva);
 
+%% PCA
+pca_components = 125;
+[coeff,score,latent,~,explained] = pca(Xtr, 'NumComponents', pca_components);
 
+Xtr = score;
+
+Xva = bsxfun(@minus ,Xva, mean(Xva));
+Xva = Xva * coeff;
+
+%% Train the verifier and evaluate the performance
 % Train the recognizer and evaluate the performance
 %model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
 %[l,prob] = predict(model,Xva);
 
-model = fitcecoc(Xtr,Ytr);
+model = fitcsvm(Xtr,Ytr);
 [l,prob] = predict(model,Xva);
 
 % Compute the accuracy
