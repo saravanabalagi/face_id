@@ -79,15 +79,19 @@ net = vl_simplenn_tidy(net);
 
 disp('Extracting features...')
 
-hog  = false;
-lbp  = false;
-nn   = true;
+hog  = true;
+lbp  = true;
+nn   = false;
 pca_ = false;
+normalise = false;
 
 hog_cellSize   = 8;
-lbp_cellSize   = 8;
-vocab_size     = 250;
-pca_components = 2000;
+lbp_cellSize   = 4;
+pca_components = 1000;
+
+max_resize = 1.0;
+min_resize = 1.0;
+threshold = 0.0;
 
 nPosFace = length(face_images_dir);
 
@@ -104,7 +108,8 @@ end
 %%
 
 if true(hog)
-    hog_vectors = zeros(nPosFace + nNegFace, hog_cellSize * hog_cellSize * 31);
+    v = resize_size(1) / hog_cellSize;
+    hog_vectors = zeros(nPosFace + nNegFace, v * v * 31);
 
     for i = 1:nPosFace
         temp = imresize(imread([images_dir{1}, face_images_dir(i).name]), resize_size); 
@@ -130,7 +135,8 @@ end
 %%
 
 if true(lbp)
-    lbp_vectors = zeros(nPosFace + nNegFace, lbp_cellSize * lbp_cellSize * 58);
+    v = resize_size(1) / lbp_cellSize;
+    lbp_vectors = zeros(nPosFace + nNegFace, v * v * 58);
 
     for i = 1:nPosFace
         temp = imresize(imread([images_dir{1}, face_images_dir(i).name]), resize_size); 
@@ -232,13 +238,22 @@ end
 
 Ytr = [ones(nPosFace, 1); -1 * ones(nNegFace,1)];
 
+clear hog_vectors lbp_vectors nn_vectors
+
 
 %%
 
 if true(pca_)
-    [coeff, score, latent, ~, explained] = pca(Xtr, 'NumComponents', pca_components);
+    [coeff, score, ~, ~, ~] = pca(Xtr, 'NumComponents', pca_components);
 
     Xtr = score;
+end
+
+
+%%
+
+if true(normalise)
+    normr(Xtr);
 end
 
 
@@ -255,9 +270,9 @@ end
 
 disp('Training the face detector..')
 % Mdl = fitcknn(Xtr, Ytr, 'NumNeighbors', 3);
-Mdl = fitcsvm(Xtr, Ytr);
+% Mdl = fitcsvm(Xtr, Ytr);
 
-% model = train(double(Ytr), sparse(double(Xtr)));
+Mdl = train(double(Ytr), sparse(double(Xtr)));
 
 % Clear the training X and Y to save memory.
 clear Xtr Ytr
@@ -283,7 +298,13 @@ for k = 1:length(val_file)
     window_size = [64 64];
     
     % Sliding window function
-    [patches, temp_bbox] = sw_detect_face(img, window_size, 1, 32);   
+    [patches, temp_bbox] = sw_detect_face(img, window_size, max_resize, 8);
+    
+    for p = max_resize - 0.1:-0.1:min_resize
+        [temp_patches, temp_bbox2] = sw_detect_face(img, window_size, p, 8);
+        patches = cat(1, patches, temp_patches);
+        temp_bbox = cat(1, temp_bbox, temp_bbox2);
+    end
     
     % Extract the features for each patch
     total = 0;
@@ -295,7 +316,8 @@ for k = 1:length(val_file)
     end
     
     if true(hog)
-        te_hog_vectors = zeros(total, hog_cellSize * hog_cellSize * 31);
+        v = resize_size(1) / hog_cellSize;
+        te_hog_vectors = zeros(total, v * v * 31);
         
         hog_iter = 1;
 
@@ -310,7 +332,8 @@ for k = 1:length(val_file)
     end
     
     if true(lbp)
-        te_lbp_vectors = zeros(total, lbp_cellSize * lbp_cellSize * 58);
+        v = resize_size(1) / lbp_cellSize;
+        te_lbp_vectors = zeros(total, v * v * 58);
         
         lbp_iter = 1;
 
@@ -381,13 +404,19 @@ for k = 1:length(val_file)
         Xte = bsxfun(@minus, Xte, mean(Xte));
         Xte = Xte * coeff;
     end
+    
+    if true(normalise)
+        normr(Xte);
+    end
 
     % Get the positive probability for proposed faces
-    [l, score] = predict(Mdl, Xte);
-    prob2 = score(:, 2);
+    [predicted_label, ~, prob_estimates] = predict(zeros(size(Xte, 1), 1), sparse(Xte), Mdl);
+    l = predicted_label;
+    score = prob_estimates;
+    prob2 = score(:, 1);
     
     % Setting a threshold to pick the proposed face images
-    threshold = 0.5;
+%     threshold = 0.0;
     threshold_bbox = bbox_ms(prob2 > threshold, :);
     prob3 = prob2(prob2 > threshold, :);
 
@@ -431,11 +460,11 @@ total_Pred_P = zeros(length(val_file2), 100);
 imset = imageSet(val_dir{2}, 'recursive');
 count = 0;
 
-total = 0;
+overall_total = 0;
 
 for k = 1:length(val_file2)
     for u = 1:length(imset(k).Count)
-        total = total + 1;
+        overall_total = overall_total + 1;
     end
 end
 
@@ -449,8 +478,14 @@ for k = 1:length(val_file2)
         if size(img, 3)>1, img = rgb2gray(img); end
         window_size=[64 64];
 
-        % Use sliding window to get multiple patches from the original image
-        [patches, temp_bbox] = sw_detect_face(img, window_size, 1, 8);    
+        % Sliding window function
+        [patches, temp_bbox] = sw_detect_face(img, window_size, max_resize, 8);
+
+        for p = max_resize - 0.1:-0.1:min_resize
+            [temp_patches, temp_bbox2] = sw_detect_face(img, window_size, p, 8);
+            patches = cat(1, patches, temp_patches);
+            temp_bbox = cat(1, temp_bbox, temp_bbox2);
+        end
         
         % Extract the features for each patch
         total = 0;
@@ -462,7 +497,8 @@ for k = 1:length(val_file2)
         end
 
         if true(hog)
-            te_hog_vectors = zeros(total, hog_cellSize * hog_cellSize * 31);
+            v = resize_size(1) / hog_cellSize;
+            te_hog_vectors = zeros(total, v * v * 31);
 
             hog_iter = 1;
 
@@ -477,7 +513,8 @@ for k = 1:length(val_file2)
         end
 
         if true(lbp)
-            te_lbp_vectors = zeros(total, lbp_cellSize * lbp_cellSize * 58);
+            v = resize_size(1) / lbp_cellSize;
+            te_lbp_vectors = zeros(total, v * v * 58);
 
             lbp_iter = 1;
 
@@ -548,15 +585,16 @@ for k = 1:length(val_file2)
             Xte = bsxfun(@minus, Xte, mean(Xte));
             Xte = Xte * coeff;
         end
+        
+        if true(normalise)
+            normr(Xte);
+        end
 
-        % Get the positive probability
-%         Xte = Xte';
-        %[~,~,d] = liblinearpredict(ones(size(Xte,1),1),sparse(double(Xte)),detector);
-        %prob2 = 1./(1+exp(-d));
-        %prob = [1-prob2, prob2];
-
-        [~,score] = predict(Mdl, Xte);
-        prob2 = score(:, 2);
+        % Get the positive probability for proposed faces
+        [predicted_label, ~, prob_estimates] = predict(zeros(size(Xte, 1), 1), sparse(Xte), Mdl);
+        l = predicted_label;
+        score = prob_estimates;
+        prob2 = score(:, 1);
     
         % Getting the True positive, condition positive, predicted positive
         % number for evaluating the algorithm performance via Average 
@@ -565,12 +603,14 @@ for k = 1:length(val_file2)
         total_condi_P(count, :) = condi_P;
         total_Pred_P(count, :) = Pred_P;
         
-        perc = count / total;
+        perc = count / overall_total;
         waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
                 
         clear Xte Yte
     end
 end
+
+close(h);
 
 
 % Summing the statistics over all faces images.
