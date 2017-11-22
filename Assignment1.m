@@ -80,14 +80,18 @@ net = vl_simplenn_tidy(net);
 disp('Extracting features...')
 
 hog  = true;
-lbp  = false;
+lbp  = true;
 nn   = false;
 pca_ = false;
+normalise = false;
 
 hog_cellSize   = 8;
-lbp_cellSize   = 8;
-vocab_size     = 250;
-pca_components = 125;
+lbp_cellSize   = 4;
+pca_components = 1000;
+
+max_resize = 1.0;
+min_resize = 1.0;
+threshold = 0.0;
 
 nPosFace = length(face_images_dir);
 
@@ -104,24 +108,25 @@ end
 %%
 
 if true(hog)
-    hog_vectors = zeros(nPosFace + nNegFace, hog_cellSize * hog_cellSize * 31);
+    v = resize_size(1) / hog_cellSize;
+    hog_vectors = zeros(nPosFace + nNegFace, v * v * 31);
 
-    for i =1:nPosFace
+    for i = 1:nPosFace
         temp = imresize(imread([images_dir{1}, face_images_dir(i).name]), resize_size); 
         temp = single(temp)/255;
         temp = vl_hog(temp, hog_cellSize);
-        tr_hog_vectors(i, :) = temp(:)';
+        hog_vectors(i, :) = temp(:)';
     end
     
-    va_iter = 1;
+    hog_iter = 1;
 
-    for i=1:length(imset)
+    for i = 1:length(imset)
         for j = 1:imset(i).Count
             temp = imresize(read(imset(i), j), resize_size);
             temp = single(temp)/255;
             temp = vl_hog(temp, hog_cellSize);
-            va_hog_vectors(nPosFace + va_iter, :) = temp(:)';
-            va_iter = va_iter + 1;
+            hog_vectors(nPosFace + hog_iter, :) = temp(:)';
+            hog_iter = hog_iter + 1;
         end
     end
 end
@@ -129,91 +134,89 @@ end
 
 %%
 
-% if true(lbp)
-%     tr_lbp_vectors = zeros(nPosFace, lbp_cellSize * lbp_cellSize * 58);
-%     va_lbp_vectors = zeros(nNegFace, lbp_cellSize * lbp_cellSize * 58);
-% 
-%     for i =1:nPosFace
-%         temp = imresize(imread([images_dir{1}, face_images_dir(i).name]), resize_size); 
-%         temp = single(temp)/255;
-%         temp = vl_lbp(temp, lbp_cellSize);
-%         tr_lbp_vectors(i, :) = temp(:)';
-%     end
-%     
-%     va_iter = 1;
-%     
-%     for i=1:length(imset)
-%         for j = 1:imset(i).Count
-%             temp = imresize(read(imset(i), j), resize_size);
-%             temp = single(temp)/255;
-%             temp = vl_lbp(temp, lbp_cellSize);
-%             va_lbp_vectors(va_iter, :) = temp(:)';
-%             va_iter = va_iter + 1;
-%         end
-%     end
-% end
-% 
-% 
-% %%
-% 
-% if true(nn)
-%     if ~exist('tr_nn_vectors')
-%         if exist(fullfile('data/face_detection/', 'nn_vectors.mat'), 'file') == 2
-%             nn_vectors = load(fullfile('data/face_detection/', 'nn_vectors.mat'));
-%             tr_nn_vectors = nn_vectors.tr_nn_vectors;
-%             va_nn_vectors = nn_vectors.va_nn_vectors;
-%             disp('Neural net vectors loaded from storage');
-%         else
-%             nn_vector_size = 2622;
-% 
-%             tr_nn_vectors = zeros(nPosFace, nn_vector_size);
-%             va_nn_vectors = zeros(nNegFace, nn_vector_size);
-% 
-%             h = waitbar(0, 'Initializing waitbar...', 'Name', 'Recognition: Extracting features...');
-% 
-%             for i =1:nPosFace
-%                 temp = imresize(imread([images_dir{1}, face_images_dir(i).name]), resize_size);
-%                 temp = single(temp); % 255 range.
-%                 temp = imresize(temp, net.meta.normalization.imageSize(1:2));
-%                 temp = repmat(temp, [1, 1, 3]);
-%                 temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
-%                 temp = vl_simplenn(net, temp);
-%                 temp = squeeze(temp(37).x);
-%                 temp = temp./norm(temp,2);
-%                 tr_nn_vectors(i, :, :) = temp(:)';
-% 
-%                 perc = i / (nFace + nNegFace);
-%                 waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
-%             end
-% 
-%             va_iter = 1;
-% 
-%             for i=1:length(imset)
-%                 for j = 1:imset(i).Count
-%                     temp = imresize(read(imset(i), j), resize_size);
-%                     temp = single(temp); % 255 range.
-%                     temp = imresize(temp, net.meta.normalization.imageSize(1:2));
-%                     temp = repmat(temp, [1, 1, 3]);
-%                     temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
-%                     temp = vl_simplenn(net, temp);
-%                     temp = squeeze(temp(37).x);
-%                     temp = temp./norm(temp,2);
-%                     va_nn_vectors(va_iter, :, :) = temp(:)';
-% 
-%                     perc = (nFace + va_iter) / (nFace + nNegFace);
-%                     waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
-% 
-%                     va_iter = va_iter + 1;
-%                 end
-%             end
-% 
-%             close(h);
-%             
-%             % Save output
-%             save('data/face_detection/nn_vectors.mat', 'tr_nn_vectors', 'va_nn_vectors');
-%         end
-%     end
-% end
+if true(lbp)
+    v = resize_size(1) / lbp_cellSize;
+    lbp_vectors = zeros(nPosFace + nNegFace, v * v * 58);
+
+    for i = 1:nPosFace
+        temp = imresize(imread([images_dir{1}, face_images_dir(i).name]), resize_size); 
+        temp = single(temp)/255;
+        temp = vl_lbp(temp, lbp_cellSize);
+        lbp_vectors(i, :) = temp(:)';
+    end
+    
+    lbp_iter = 1;
+    
+    for i = 1:length(imset)
+        for j = 1:imset(i).Count
+            temp = imresize(read(imset(i), j), resize_size);
+            temp = single(temp)/255;
+            temp = vl_lbp(temp, lbp_cellSize);
+            lbp_vectors(nPosFace + lbp_iter, :) = temp(:)';
+            lbp_iter = lbp_iter + 1;
+        end
+    end
+end
+
+
+%%
+
+if true(nn)
+    if ~exist('nn_vectors', 'var')
+        if exist(fullfile('data/face_detection/nn_vectors/training/', 'tr_nn_vectors.mat'), 'file') == 2
+            nn_vectors = load(fullfile('data/face_detection/nn_vectors/training/', 'tr_nn_vectors.mat'));
+            nn_vectors = nn_vectors.nn_vectors;
+            disp('Training neural net vectors loaded from storage');
+        else
+            nn_vector_size = 2622;
+
+            nn_vectors = zeros(nPosFace + nNegFace, nn_vector_size);
+
+            h = waitbar(0, 'Initializing waitbar...', 'Name', 'Recognition: Extracting features...');
+
+            for i = 1:nPosFace
+                temp = imresize(imread([images_dir{1}, face_images_dir(i).name]), resize_size);
+                temp = single(temp); % 255 range.
+                temp = imresize(temp, net.meta.normalization.imageSize(1:2));
+                temp = repmat(temp, [1, 1, 3]);
+                temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
+                temp = vl_simplenn(net, temp);
+                temp = squeeze(temp(37).x);
+                temp = temp./norm(temp,2);
+                nn_vectors(i, :, :) = temp(:)';
+
+                perc = i / (nPosFace + nNegFace);
+                waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
+            end
+
+            va_iter = 1;
+
+            for i=1:length(imset)
+                for j = 1:imset(i).Count
+                    temp = imresize(read(imset(i), j), resize_size);
+                    temp = single(temp); % 255 range.
+                    temp = imresize(temp, net.meta.normalization.imageSize(1:2));
+                    temp = repmat(temp, [1, 1, 3]);
+                    temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
+                    temp = vl_simplenn(net, temp);
+                    temp = squeeze(temp(37).x);
+                    temp = temp./norm(temp,2);
+                    nn_vectors(nPosFace + va_iter, :, :) = temp(:)';
+
+                    perc = (nPosFace + va_iter) / (nPosFace + nNegFace);
+                    waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
+
+                    va_iter = va_iter + 1;
+                end
+            end
+
+            close(h);
+            
+            % Save output
+            save('data/face_detection/nn_vectors/training/tr_nn_vectors.mat', 'nn_vectors');
+        end
+    end
+end
 
 
 %%
@@ -235,28 +238,22 @@ end
 
 Ytr = [ones(nPosFace, 1); -1 * ones(nNegFace,1)];
 
-% Ytr = zeros(length(tr_img_sample), 1);
-% 
-% for i =1:length(tr_img_sample)
-%     Ytr(i) = tr_img_sample{i, 3};
-% end
-
-% Yva = zeros(length(va_img_sample), 1);
-% 
-% for i =1:length(va_img_sample)
-%     Yva(i) = va_img_sample{i, 3};
-% end
+clear hog_vectors lbp_vectors nn_vectors
 
 
 %%
 
 if true(pca_)
-    [coeff,score,latent,~,explained] = pca(Xtr, 'NumComponents', pca_components);
+    [coeff, score, ~, ~, ~] = pca(Xtr, 'NumComponents', pca_components);
 
     Xtr = score;
+end
 
-    Xva = bsxfun(@minus ,Xva, mean(Xva));
-    Xva = Xva * coeff;
+
+%%
+
+if true(normalise)
+    normr(Xtr);
 end
 
 
@@ -272,16 +269,17 @@ end
 %==========================================================================
 
 disp('Training the face detector..')
-% Mdl = fitcknn(Xtr, Ytr, 'NumNeighbors', 3); % The model could be improved by changing the KNN classifier to SVM.
-Mdl = fitcsvm(Xtr, Ytr);
+% Mdl = fitcknn(Xtr, Ytr, 'NumNeighbors', 3);
+% Mdl = fitcsvm(Xtr, Ytr);
 
-% model = train(double(Ytr), sparse(double(Xtr)));
+Mdl = train(double(Ytr), sparse(double(Xtr)));
 
 % Clear the training X and Y to save memory.
-% clear Xtr Ytr
+clear Xtr Ytr
 
 % save your trained model for evaluation.
-% save('face_detector.mat','Mdl')
+save('face_detector.mat', 'Mdl')
+
 
 %% Single/Multi-Scale Sliding Window
 %==========================================================================
@@ -291,31 +289,40 @@ Mdl = fitcsvm(Xtr, Ytr);
 % window due to the different face size in real image.
 %                                (You should finish this part by yourself)
 %==========================================================================
+
 load('face_detector.mat')
 for k = 1:length(val_file)
     img = imread([val_dir{1} val_file(k).name]);
-    plt_img=img;
-    if size(img, 3) > 1, img = rgb2gray(img); end
+    plt_img = img;
+    if size(img, 3)>1, img = rgb2gray(img); end
     window_size = [64 64];
     
-    [patches, temp_bbox] = sw_detect_face(img, window_size, 1, 32);
-       
+    % Sliding window function
+    [patches, temp_bbox] = sw_detect_face(img, window_size, max_resize, 8);
+    
+    for p = max_resize - 0.1:-0.1:min_resize
+        [temp_patches, temp_bbox2] = sw_detect_face(img, window_size, p, 8);
+        patches = cat(1, patches, temp_patches);
+        temp_bbox = cat(1, temp_bbox, temp_bbox2);
+    end
+    
     % Extract the features for each patch
     total = 0;
     
-    for p=1:length(patches)
-        for j = 1:size(patches{p},3)
+    for p = 1:length(patches)
+        for j = 1:size(patches{p}, 3)
             total = total + 1;
         end
     end
     
     if true(hog)
-        te_hog_vectors = zeros(total, hog_cellSize * hog_cellSize * 31);
+        v = resize_size(1) / hog_cellSize;
+        te_hog_vectors = zeros(total, v * v * 31);
         
         hog_iter = 1;
 
-        for p=1:length(patches)
-            for j = 1:size(patches{p}, 3);
+        for p = 1:length(patches)
+            for j = 1:size(patches{p}, 3)
                 temp = single(patches{p}(:, :, j))/255;
                 temp = vl_hog(temp, hog_cellSize);
                 te_hog_vectors(hog_iter, :) = temp(:)';
@@ -323,44 +330,54 @@ for k = 1:length(val_file)
             end
         end
     end
+    
+    if true(lbp)
+        v = resize_size(1) / lbp_cellSize;
+        te_lbp_vectors = zeros(total, v * v * 58);
+        
+        lbp_iter = 1;
 
-%     if true(lbp)
-%         te_lbp_vectors = zeros(total, lbp_cellSize * lbp_cellSize * 58);
-%         
-%         lbp_iter = 1;
-% 
-%         for p=1:length(patches)
-%             for j = 1:size(patches{p}, 3);
-%                 temp = single(patches{p}(:,:,j))/255;
-%                 temp = vl_lbp(temp, lbp_cellSize);
-%                 te_lbp_vectors(lbp_iter, :) = temp(:)';
-%                 lbp_iter = lbp_iter + 1;
-%             end
-%         end
-%     end
-%     
-%     if true(nn)
-%         nn_vector_size = 2622;
-% 
-%         te_nn_vectors = zeros(total, nn_vector_size);
-%         
-%         nn_iter = 1;
-% 
-%         for p=1:length(patches)
-%             for j = 1:size(patches{p}, 3);
-%                 temp = single(patches{p}(:,:,j)); % 255 range.
-%                 temp = imresize(temp, net.meta.normalization.imageSize(1:2));
-%                 temp = repmat(temp, [1, 1, 3]);
-%                 temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
-%                 temp = vl_simplenn(net, temp);
-%                 temp = squeeze(temp(37).x);
-%                 temp = temp./norm(temp,2);
-%                 te_nn_vectors(nn_iter, :, :) = temp(:)';
-%                 nn_iter = nn_iter + 1;
-%             end
-%         end
-%     end
+        for p = 1:length(patches)
+            for j = 1:size(patches{p}, 3)
+                temp = single(patches{p}(:, :, j))/255;
+                temp = vl_lbp(temp, lbp_cellSize);
+                te_lbp_vectors(lbp_iter, :) = temp(:)';
+                lbp_iter = lbp_iter + 1;
+            end
+        end
+    end
+    
+    if true(nn)
+        if exist(strcat('data/face_detection/nn_vectors/visualization/vi_nn_vectors_', int2str(k), '.mat'), 'file') == 2
+            nn_vectors = load(strcat('data/face_detection/nn_vectors/visualization/vi_nn_vectors_', int2str(k), '.mat'));
+            te_nn_vectors = nn_vectors.te_nn_vectors;
+            disp(strcat('Visualization neural net vectors_', int2str(k), '_loaded from storage'));
+        else
+            nn_vector_size = 2622;
 
+            te_nn_vectors = zeros(total, nn_vector_size);
+
+            nn_iter = 1;
+
+            for p = 1:length(patches)
+                for j = 1:size(patches{p}, 3)
+                    temp = single(patches{p}(:, :, j)); % 255 range.
+                    temp = imresize(temp, net.meta.normalization.imageSize(1:2));
+                    temp = repmat(temp, [1, 1, 3]);
+                    temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
+                    temp = vl_simplenn(net, temp);
+                    temp = squeeze(temp(37).x);
+                    temp = temp./norm(temp, 2);
+                    te_nn_vectors(nn_iter, :, :) = temp(:)';
+                    nn_iter = nn_iter + 1;
+                end
+            end
+            
+            % Save output
+            save(strcat('data/face_detection/nn_vectors/visualization/vi_nn_vectors_', int2str(k), '.mat'), 'te_nn_vectors');
+        end
+    end
+    
     Xte = [];
 
     if true(hog)
@@ -378,22 +395,28 @@ for k = 1:length(val_file)
     bbox_ms = [];
     
     for p = 1:length(patches)
-        for j = 1:size(patches{p},3)
+        for j = 1:size(patches{p}, 3)
             bbox_ms = [bbox_ms; temp_bbox{p}(j, :)];
         end
     end
+    
+    if true(pca_)
+        Xte = bsxfun(@minus, Xte, mean(Xte));
+        Xte = Xte * coeff;
+    end
+    
+    if true(normalise)
+        normr(Xte);
+    end
 
     % Get the positive probability for proposed faces
-%     Xte = Xte';    
+    [predicted_label, ~, prob_estimates] = predict(zeros(size(Xte, 1), 1), sparse(Xte), Mdl);
+    l = predicted_label;
+    score = prob_estimates;
+    prob2 = score(:, 1);
     
-    [l, score] = predict(Mdl, Xte);
-    prob2 = score(:, 2);
- 
-%     [predicted_labels, accuracy, prob_estimates] = predict(zeros(size(Xte, 1), 1), sparse(double(Xte)), model);
-%     prob2 = predicted_labels;
-    
-%   Setting a threshold to pick the proposed face images
-    threshold = 0.5;
+    % Setting a threshold to pick the proposed face images
+%     threshold = 0.0;
     threshold_bbox = bbox_ms(prob2 > threshold, :);
     prob3 = prob2(prob2 > threshold, :);
 
@@ -407,8 +430,8 @@ for k = 1:length(val_file)
     figure
     imshow(plt_img)
     hold on
-    for i = 1:size(bbox_position,1)
-    rectangle('Position', [bbox_position(i, 2), bbox_position(i, 1), bbox_position(i, 3:4)],...
+    for i = 1:size(bbox_position, 1)
+    rectangle('Position', [bbox_position(i, 2),bbox_position(i, 1),bbox_position(i, 3:4)],...
         'EdgeColor', 'b', 'LineWidth', 3)
     
     % This is the bounding box of ground truth. You should not modify this
@@ -418,9 +441,10 @@ for k = 1:length(val_file)
         'EdgeColor', 'r', 'LineWidth', 3)
     %======================================================================
     end
-    saveas(gcf, ['scratch/', val_file(k).name(1:end-4), '_sw64.png'])
+    saveas(gcf, [val_file(k).name(1:end-4), '_sw64.png'])
     clear Xte Yte
 end
+
 
 %% Evaluating your result on the val_datasets
 
@@ -429,71 +453,164 @@ load('face_detector.mat')
 % Initialization of the true positive, condition positive and prediction
 % positive number collection.
 
-total_TP = zeros(length(val_file2),100);
-total_condi_P = zeros(length(val_file2),100);
-total_Pred_P = zeros(length(val_file2),100);
+total_TP = zeros(length(val_file2), 100);
+total_condi_P = zeros(length(val_file2), 100);
+total_Pred_P = zeros(length(val_file2), 100);
 
 imset = imageSet(val_dir{2}, 'recursive');
 count = 0;
 
-for k=1:length(val_file2)
-    
-    
-    for j = 1:length(imset(k).Count)
-        count = count+1;
-        img = read(imset(k),j);
-        plt_img=img;
-        if size(img,3)>1, img = rgb2gray(img); end
+overall_total = 0;
+
+for k = 1:length(val_file2)
+    for u = 1:length(imset(k).Count)
+        overall_total = overall_total + 1;
+    end
+end
+
+h = waitbar(0, 'Initializing waitbar...', 'Name', 'Validation: Extracting features...');
+
+for k = 1:length(val_file2)
+    for u = 1:length(imset(k).Count)
+        count = count + 1;
+        img = read(imset(k), u);
+        plt_img = img;
+        if size(img, 3)>1, img = rgb2gray(img); end
         window_size=[64 64];
 
-        % Use sliding window to get multiple patches from the original image
-        [patches,temp_bbox] = sw_detect_face(img,window_size,0.8,8);    
-        Xte=[];
-        bbox_ms = [];
-        
-        count2 = 0;
+        % Sliding window function
+        [patches, temp_bbox] = sw_detect_face(img, window_size, max_resize, 8);
 
-        % Extract your features here
-        for p=1:length(patches)
-            for j = 1:size(patches{p},3)
-                face_img = single(patches{p}(:,:,j))/255;
-                hog = vl_hog(face_img, cellSize);
-                lbp = vl_lbp(face_img, cellSize);
-                Xte = [Xte [hog(:);lbp(:)]];
-                bbox_ms = [bbox_ms;temp_bbox{p}(j,:)];
-                
-                count2 = count2 + 1;
+        for p = max_resize - 0.1:-0.1:min_resize
+            [temp_patches, temp_bbox2] = sw_detect_face(img, window_size, p, 8);
+            patches = cat(1, patches, temp_patches);
+            temp_bbox = cat(1, temp_bbox, temp_bbox2);
+        end
+        
+        % Extract the features for each patch
+        total = 0;
+
+        for p = 1:length(patches)
+            for j = 1:size(patches{p}, 3)
+                total = total + 1;
             end
         end
 
-        % Get the positive probability
-        Xte = Xte';
-        %[~,~,d] = liblinearpredict(ones(size(Xte,1),1),sparse(double(Xte)),detector);
-        %prob2 = 1./(1+exp(-d));
-        %prob = [1-prob2, prob2];
+        if true(hog)
+            v = resize_size(1) / hog_cellSize;
+            te_hog_vectors = zeros(total, v * v * 31);
 
-%         [~,score] = predict(Mdl,Xte);
-%         prob2 = score(:,2);
+            hog_iter = 1;
+
+            for p = 1:length(patches)
+                for j = 1:size(patches{p}, 3)
+                    temp = single(patches{p}(:, :, j))/255;
+                    temp = vl_hog(temp, hog_cellSize);
+                    te_hog_vectors(hog_iter, :) = temp(:)';
+                    hog_iter = hog_iter + 1;
+                end
+            end
+        end
+
+        if true(lbp)
+            v = resize_size(1) / lbp_cellSize;
+            te_lbp_vectors = zeros(total, v * v * 58);
+
+            lbp_iter = 1;
+
+            for p = 1:length(patches)
+                for j = 1:size(patches{p}, 3)
+                    temp = single(patches{p}(:, :, j))/255;
+                    temp = vl_lbp(temp, lbp_cellSize);
+                    te_lbp_vectors(lbp_iter, :) = temp(:)';
+                    lbp_iter = lbp_iter + 1;
+                end
+            end
+        end
+
+        if true(nn)
+            if exist(strcat('data/face_detection/nn_vectors/validation/va_nn_vectors_', int2str(k), '_', int2str(u), '.mat'), 'file') == 2
+                nn_vectors = load(strcat('data/face_detection/nn_vectors/validation/va_nn_vectors_', int2str(k), '_', int2str(u), '.mat'));
+                te_nn_vectors = nn_vectors.te_nn_vectors;
+                disp(strcat('Validation neural net vectors_', int2str(k), '_', int2str(u), '_loaded from storage'));
+            else
+                nn_vector_size = 2622;
+
+                te_nn_vectors = zeros(total, nn_vector_size);
+
+                nn_iter = 1;
+
+                for p = 1:length(patches)
+                    for j = 1:size(patches{p}, 3)
+                        temp = single(patches{p}(:, :, j)); % 255 range.
+                        temp = imresize(temp, net.meta.normalization.imageSize(1:2));
+                        temp = repmat(temp, [1, 1, 3]);
+                        temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
+                        temp = vl_simplenn(net, temp);
+                        temp = squeeze(temp(37).x);
+                        temp = temp./norm(temp, 2);
+                        te_nn_vectors(nn_iter, :, :) = temp(:)';
+                        nn_iter = nn_iter + 1;
+                    end
+                end
+                
+                % Save output
+                save(strcat('data/face_detection/nn_vectors/validation/va_nn_vectors_', int2str(k), '_', int2str(u), '.mat'), 'te_nn_vectors');
+            end
+        end
+
+        Xte = [];
+
+        if true(hog)
+            Xte = cat(2, Xte, te_hog_vectors);
+        end
+
+        if true(lbp)
+            Xte = cat(2, Xte, te_lbp_vectors);
+        end
+
+        if true(nn)
+            Xte = cat(2, Xte, te_nn_vectors);
+        end
+
+        bbox_ms = [];
+
+        for p = 1:length(patches)
+            for j = 1:size(patches{p}, 3)
+                bbox_ms = [bbox_ms; temp_bbox{p}(j, :)];
+            end
+        end
+
+        if true(pca_)
+            Xte = bsxfun(@minus, Xte, mean(Xte));
+            Xte = Xte * coeff;
+        end
         
-        [predicted_labels, accuracy, prob_estimates] = predict(zeros(count2, 1), sparse(double(Xte)), model);
-        prob2 = predicted_labels;
-        
-%         prob2 = score(:,1);
-%         for probi = 1:1:length(prob2)
-%             prob2(probi) = 1/(1 + exp(prob2(probi)));
-%         end
-        
-        
+        if true(normalise)
+            normr(Xte);
+        end
+
+        % Get the positive probability for proposed faces
+        [predicted_label, ~, prob_estimates] = predict(zeros(size(Xte, 1), 1), sparse(Xte), Mdl);
+        l = predicted_label;
+        score = prob_estimates;
+        prob2 = score(:, 1);
     
         % Getting the True positive, condition positive, predicted positive
         % number for evaluating the algorithm performance via Average 
         [ TP_num, condi_P, Pred_P ] = evaluate_detector( bbox_ms, prob2 );
-        total_TP(count,:) = TP_num;
-        total_condi_P(count,:) = condi_P;
-        total_Pred_P(count,:) = Pred_P;
+        total_TP(count, :) = TP_num;
+        total_condi_P(count, :) = condi_P;
+        total_Pred_P(count, :) = Pred_P;
+        
+        perc = count / overall_total;
+        waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
+                
         clear Xte Yte
     end
 end
+
+close(h);
 
 
 % Summing the statistics over all faces images.
@@ -514,7 +631,6 @@ figure
 plot(Recall, Precision)
 xlabel('Recall');
 ylabel('Precision');
-
 
 % Average Precision
 AP = Precision;
