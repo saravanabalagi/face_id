@@ -22,25 +22,24 @@ run ICV_setup
 % Hyperparameter of experiments
 resize_size=[64 64];
 
-if ~exist('net')
-    % Setup MatConvNet.
-    addpath(genpath('./library/matconvnet/matlab'))
-    vl_setupnn();
+% if ~exist('net')
+% Setup MatConvNet.
+addpath(genpath('./library/matconvnet/matlab'))
+vl_setupnn();
 
-    % Load the VGG-Face model.
-    modelPath = fullfile(vl_rootnn,'data','models','vgg-face.mat') ;
-    if ~exist(modelPath)
-      fprintf('Downloading the VGG-Face model ... this may take a while\n') ;
-      mkdir(fileparts(modelPath)) ;
-      urlwrite(...
-        'http://www.vlfeat.org/matconvnet/models/vgg-face.mat', ...
-        modelPath) ;
-    end
-
-    % Load the model and upgrade it to MatConvNet current version.
-    net = load(modelPath);
-    net = vl_simplenn_tidy(net);
+% Load the VGG-Face model.
+modelPath = fullfile(vl_rootnn,'data','models','vgg-face.mat') ;
+if ~exist(modelPath)
+  fprintf('Downloading the VGG-Face model ... this may take a while\n') ;
+  mkdir(fileparts(modelPath)) ;
+  urlwrite(...
+    'http://www.vlfeat.org/matconvnet/models/vgg-face.mat', ...
+    modelPath) ;
 end
+
+% Load the model and upgrade it to MatConvNet current version.
+net = load(modelPath);
+net = vl_simplenn_tidy(net);
 
 
 %% Part I: Face Recognition: Who is it?
@@ -197,40 +196,52 @@ end
 
 if true(nn)
     if ~exist('tr_nn_vectors')
-        nn_vector_size = 2622;
+        if exist(fullfile('data/face_recognition/', 'nn_vectors.mat'), 'file') == 2
+            nn_vectors = load(fullfile('data/face_recognition/', 'nn_vectors.mat'));
+            tr_nn_vectors = nn_vectors.tr_nn_vectors;
+            va_nn_vectors = nn_vectors.va_nn_vectors;
+            disp('Neural net vectors loaded from storage');
+        else
+            nn_vector_size = 2622;
 
-        tr_nn_vectors = zeros(length(tr_img_sample), nn_vector_size);
-        va_nn_vectors = zeros(length(va_img_sample), nn_vector_size);
+            tr_nn_vectors = zeros(length(tr_img_sample), nn_vector_size);
+            va_nn_vectors = zeros(length(va_img_sample), nn_vector_size);
 
-        h = waitbar(0, 'Initializing waitbar...', 'Name', 'Recognition: Extracting features...');
+            h = waitbar(0, 'Initializing waitbar...', 'Name', 'Recognition: Extracting features...');
 
-        for i =1:length(tr_img_sample)
-            temp = single(tr_img_sample{i,1}); % 255 range.
-            temp = imresize(temp, net.meta.normalization.imageSize(1:2));
-            temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
-            temp = vl_simplenn(net, temp);
-            temp = squeeze(temp(37).x);
-            temp = temp./norm(temp,2);
-            tr_nn_vectors(i, :, :) = temp(:)';
+            for i =1:length(tr_img_sample)
+                temp = single(tr_img_sample{i,1}); % 255 range.
+                temp = imresize(temp, net.meta.normalization.imageSize(1:2));
+                temp = repmat(temp, [1, 1, 3]);
+                temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
+                temp = vl_simplenn(net, temp);
+                temp = squeeze(temp(37).x);
+                temp = temp./norm(temp,2);
+                tr_nn_vectors(i, :, :) = temp(:)';
 
-            perc = i / (length(tr_img_sample) + length(va_img_sample));
-            waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
+                perc = i / (length(tr_img_sample) + length(va_img_sample));
+                waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
+            end
+
+            for i =1:length(va_img_sample)
+                temp = single(va_img_sample{i,1}); % 255 range.
+                temp = imresize(temp, net.meta.normalization.imageSize(1:2));
+                temp = repmat(temp, [1, 1, 3]);
+                temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
+                temp = vl_simplenn(net, temp);
+                temp = squeeze(temp(37).x);
+                temp = temp./norm(temp,2);
+                va_nn_vectors(i, :, :) = temp(:)';
+
+                perc = (length(tr_img_sample) + i) / (length(tr_img_sample) + length(va_img_sample));
+                waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
+            end
+
+            close(h);
+            
+            % Save output
+            save('data/face_recognition/nn_vectors.mat', 'tr_nn_vectors', 'va_nn_vectors');
         end
-
-        for i =1:length(va_img_sample)
-            temp = single(va_img_sample{i,1}); % 255 range.
-            temp = imresize(temp, net.meta.normalization.imageSize(1:2));
-            temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
-            temp = vl_simplenn(net, temp);
-            temp = squeeze(temp(37).x);
-            temp = temp./norm(temp,2);
-            va_nn_vectors(i, :, :) = temp(:)';
-
-            perc = (length(tr_img_sample) + i) / (length(tr_img_sample) + length(va_img_sample));
-            waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
-        end
-
-        close(h);
     end
 end
 
@@ -346,6 +357,9 @@ load('./data/face_verification/face_verification_tr.mat')
 
 % Ytr2 = zeros(1800,2);
 
+
+%%
+
 h = waitbar(0,'Name','Extracting features...','Initializing waitbar...');
 
 % You should construct the features in here. (read, resize, extract)
@@ -357,6 +371,8 @@ for i =1:length(tr_img_pair)
 %     
 %     img1 = imread([foldername, '/', tr_img_pair{i,2}, '.png']);
 %     img2 = imread([foldername, '/', tr_img_pair{i,4}, '.png']);
+
+
 
     im_ = single(tr_img_pair{i,1}) ; % note: 255 range
     im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
