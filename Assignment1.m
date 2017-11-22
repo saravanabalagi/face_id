@@ -31,7 +31,7 @@ face_images_dir(1:2)=[];
 val_dir{1} = './data/face_detection/val_face_detection_images/'; % Validation data (For visualization purpose).
 val_file = dir(val_dir{1});
 val_file(1:2)=[];
-val_dir{2} = './data/face_detection/val_raw_images/';            % Validation data (For performance evaluation)
+val_dir{2} = './data/face_detection/te_raw_images/';            % Validation data (For performance evaluation)
 val_file2 = dir(val_dir{2});
 val_file2(1:2)=[];
 
@@ -90,7 +90,7 @@ lbp_cellSize   = 4;
 pca_components = 1000;
 
 max_resize = 1.0;
-min_resize = 1.0;
+min_resize = 0.8;
 threshold = 0.0;
 
 nPosFace = length(face_images_dir);
@@ -271,6 +271,8 @@ end
 disp('Training the face detector..')
 % Mdl = fitcknn(Xtr, Ytr, 'NumNeighbors', 3);
 % Mdl = fitcsvm(Xtr, Ytr);
+
+addpath('library/liblinear-2.1/windows/');
 
 Mdl = train(double(Ytr), sparse(double(Xtr)));
 
@@ -599,9 +601,9 @@ for k = 1:length(val_file2)
         % Getting the True positive, condition positive, predicted positive
         % number for evaluating the algorithm performance via Average 
         [ TP_num, condi_P, Pred_P ] = evaluate_detector( bbox_ms, prob2 );
-        total_TP(count, :) = TP_num;
-        total_condi_P(count, :) = condi_P;
-        total_Pred_P(count, :) = Pred_P;
+        total_TP(count,:) = TP_num;
+        total_condi_P(count,:) = condi_P;
+        total_Pred_P(count,:) = Pred_P;
         
         perc = count / overall_total;
         waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
@@ -632,8 +634,7 @@ plot(Recall, Precision)
 xlabel('Recall');
 ylabel('Precision');
 
-% Average Precision
-AP = Precision;
-AP(isnan(AP)) = 0;
-AP = mean(AP); 
+
+% Interpolated Average Precision
+AP = VOCap(Recall', Precision');
 disp(num2str(AP))
