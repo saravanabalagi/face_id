@@ -512,8 +512,8 @@ end
 % Xtr = [nn_1_train-nn_2_train];
 % Xva = [nn_1_val-nn_2_val];
 
-Xtr = sqrt(sum((lbp_1_train-lbp_2_train)'.^2))';
-Xva = sqrt(sum((lbp_1_val-lbp_2_val)'.^2))';
+Xtr = [sqrt(sum((lbp_1_train-lbp_2_train)'.^2))' sqrt(sum((nn_1_train-nn_2_train)'.^2))'];
+Xva = [sqrt(sum((lbp_1_val-lbp_2_val)'.^2))' sqrt(sum((nn_1_val-nn_2_val)'.^2))'];
 
 Xtr = double(Xtr);
 Xva = double(Xva);
