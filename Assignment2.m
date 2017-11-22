@@ -519,7 +519,7 @@ Xtr = double(Xtr);
 Xva = double(Xva);
 
 %% PCA
-pca_components = 125;
+pca_components = min(size(Xtr,2),125);
 [coeff,score,latent,~,explained] = pca(Xtr, 'NumComponents', pca_components);
 
 Xtr = score;
