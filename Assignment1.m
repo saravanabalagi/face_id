@@ -99,7 +99,7 @@ nNegFace = 0;
 imset = imageSet(images_dir{2}, 'recursive');
 
 for i=1:length(imset)
-   parfor j = 1:imset(i).Count
+   for j = 1:imset(i).Count
         nNegFace = nNegFace + 1;
     end
 end
