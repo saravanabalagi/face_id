@@ -66,7 +66,7 @@ Xva = []; Yva = [];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 load('./data/face_recognition/face_recognition_data_tr.mat');
-load('./data/face_recognition/face_recognition_data_va.mat');
+load('./data/face_recognition/face_recognition_data_te.mat');
 
 
 %%
@@ -98,7 +98,7 @@ pca_ = false;
 hog_cellSize   = 8;
 lbp_cellSize   = 8;
 vocab_size     = 250;
-pca_components = 125;
+pca_components = 250;
 
 
 %%
@@ -204,8 +204,8 @@ if true(nn)
         else
             nn_vector_size = 2622;
 
-            tr_nn_vectors = zeros(length(tr_img_sample), nn_vector_size);
-            va_nn_vectors = zeros(length(va_img_sample), nn_vector_size);
+            tr_nn_vectors = zeros(size(tr_img_sample, 1), nn_vector_size);
+            va_nn_vectors = zeros(size(va_img_sample, 1), nn_vector_size);
 
             h = waitbar(0, 'Initializing waitbar...', 'Name', 'Recognition: Extracting features...');
 
@@ -284,7 +284,7 @@ end
 %%
 
 if true(pca_)
-    [coeff,score,latent,~,explained] = pca(Xtr, 'NumComponents', pca_components);
+    [coeff, score, latent, ~, explained] = pca(Xtr, 'NumComponents', pca_components);
 
     Xtr = score;
 
@@ -306,17 +306,26 @@ Xva = double(Xva);
 % model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
 % [l,prob] = predict(model,Xva);
 
-model = fitcecoc(Xtr, Ytr);
-[l,prob] = predict(model, Xva);
+addpath('library/liblinear-2.1/windows/');
+
+Mdl = train(double(Ytr), sparse(double(Xtr)));
+
+[predicted_label, ~, prob_estimates] = predict(zeros(size(Xva, 1), 1), sparse(Xva), Mdl);
+l = predicted_label;
+prob = prob_estimates;
+
+% model = fitcecoc(Xtr, Ytr);
+% [l,prob] = predict(model, Xva);
 
 % Compute the accuracy
-acc = mean(l==Yva)*100;
+acc = mean(l == Yva) * 100;
 
 fprintf('The accuracy of face recognition is:%.2f \n', acc)
 % Check your result on the raw images and try to analyse the limits of the
 % current method.
 
-return
+% save your trained model for evaluation.
+save('face_recognizer.mat', 'Mdl')
 
 
 %% Visualization the result of face recognition
@@ -344,7 +353,7 @@ cellSize = 8;
 Xtr = [];
 Xva = [];
 load('./data/face_verification/face_verification_tr.mat')
-load('./data/face_verification/face_verification_va.mat')
+load('./data/face_verification/face_verification_te.mat')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Loading the training data
 % -tr_img_pair/va_img_pair:
@@ -444,7 +453,7 @@ end
 % BoW visual representation (Or any other better representation)
 
 
-% load('./data/face_verification/face_verification_va.mat')
+% load('./data/face_verification/face_verification_te.mat')
 for i =1:length(va_img_pair)
 %     foldername = ['data/face_verification/val_images/', num2str(i)];
 %     mkdir(foldername);
@@ -532,14 +541,24 @@ Xva = Xva * coeff;
 %model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
 %[l,prob] = predict(model,Xva);
 
-model = fitcsvm(Xtr,Ytr);
-[l,prob] = predict(model,Xva);
+% model = fitcsvm(Xtr,Ytr);
+% [l,prob] = predict(model,Xva);
+
+addpath('library/liblinear-2.1/windows/');
+
+Mdl = train(double(Ytr), sparse(double(Xtr)));
+
+[predicted_label, ~, prob_estimates] = predict(zeros(size(Xva, 1), 1), sparse(Xva), Mdl);
+l = predicted_label;
+prob = prob_estimates;
 
 % Compute the accuracy
 acc = mean(l==Yva)*100;
 
 fprintf('The accuracy of face verification is:%.2f \n', acc)
 
+% save your trained model for evaluation.
+save('face_verifier.mat', 'Mdl')
 
 
 %% Visualization the result of face verification

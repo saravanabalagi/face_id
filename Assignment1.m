@@ -113,6 +113,9 @@ if true(hog)
 
     for i = 1:nPosFace
         temp = imresize(imread([images_dir{1}, face_images_dir(i).name]), resize_size); 
+        w = warning('query', 'last');
+        id = w.identifier;
+        warning('off' ,id)
         temp = single(temp)/255;
         temp = vl_hog(temp, hog_cellSize);
         hog_vectors(i, :) = temp(:)';
@@ -140,6 +143,9 @@ if true(lbp)
 
     for i = 1:nPosFace
         temp = imresize(imread([images_dir{1}, face_images_dir(i).name]), resize_size); 
+        w = warning('query', 'last');
+        id = w.identifier;
+        warning('off' ,id)
         temp = single(temp)/255;
         temp = vl_lbp(temp, lbp_cellSize);
         lbp_vectors(i, :) = temp(:)';
@@ -176,6 +182,9 @@ if true(nn)
 
             for i = 1:nPosFace
                 temp = imresize(imread([images_dir{1}, face_images_dir(i).name]), resize_size);
+                w = warning('query', 'last');
+                id = w.identifier;
+                warning('off' ,id)
                 temp = single(temp); % 255 range.
                 temp = imresize(temp, net.meta.normalization.imageSize(1:2));
                 temp = repmat(temp, [1, 1, 3]);
