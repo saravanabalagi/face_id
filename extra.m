@@ -153,22 +153,24 @@ prob3 = prob2(prob2 > threshold, :);
 % - prob2 is the confidence of the patches
 [selectedBbox, selectedScore] = selectStrongestBbox(threshold_bbox, prob3, 'OverlapThreshold', 0.3, 'RatioType', 'Union');
 
-% Visualise the test images
-bbox_position = selectedBbox;
-figure
-imshow(plt_img)
-hold on
-for i = 1:size(bbox_position, 1)
-rectangle('Position', [bbox_position(i, 2),bbox_position(i, 1),bbox_position(i, 3:4)],...
-    'EdgeColor', 'b', 'LineWidth', 3)
+% % Visualise the test images
+% bbox_position = selectedBbox;
+% figure
+% imshow(plt_img)
+% hold on
+% for i = 1:size(bbox_position, 1)
+% rectangle('Position', [bbox_position(i, 2),bbox_position(i, 1),bbox_position(i, 3:4)],...
+%     'EdgeColor', 'b', 'LineWidth', 3)
+% end
 
-% This is the bounding box of ground truth. You should not modify this
-% part
-%======================================================================
-% rectangle('Position', [83, 92, 166-83, 175-92],...
-%     'EdgeColor', 'r', 'LineWidth', 3)
-%======================================================================
-end
+bbox_position = selectedBbox;
+
+x = bbox_position(2);
+y = bbox_position(1);
+window_x = bbox_position(4);
+window_y = bbox_position(3);
+
+patch = plt_img(y:y+window_y-1, x:x+window_x-1);
 
 
 %%
@@ -186,15 +188,9 @@ Xva = []; Yva = [];
 % image and the third dimension is the class label for each image.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-hog  = false;
-lbp  = false;
-bof  = false;
 nn   = true;
 pca_ = true;
 
-hog_cellSize   = 8;
-lbp_cellSize   = 8;
-vocab_size     = 250;
 pca_components = 250;
 
 
@@ -222,25 +218,12 @@ Yva = [];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 load('./models/fr_model.mat');
-load('./data/face_recognition/face_recognition_data_te.mat');
-
-lbp_cellSize   = 8;
-pca_components = 250;
-
-va_lbp_vectors = zeros(length(va_img_sample), lbp_cellSize * lbp_cellSize * 58);
-for i =1:length(va_img_sample)
-    temp = single(va_img_sample{i,1})/255;
-    temp = vl_lbp(temp, lbp_cellSize);
-    va_lbp_vectors(i, :) = temp(:)';
-end
 
 nn_vector_size = 2622;
-va_nn_vectors = zeros(length(va_img_sample), nn_vector_size);
+va_nn_vectors = zeros(1, nn_vector_size);
 
-h = waitbar(0, 'Initializing waitbar...', 'Name', 'Recognition: Extracting features...');
-
-for i =1:length(va_img_sample)
-    temp = single(va_img_sample{i,1}); % 255 range.
+for i =1:1
+    temp = single(patch); % 255 range.
     temp = imresize(temp, net.meta.normalization.imageSize(1:2));
     temp = repmat(temp, [1, 1, 3]);
     temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
@@ -248,17 +231,8 @@ for i =1:length(va_img_sample)
     temp = squeeze(temp(37).x);
     temp = temp./norm(temp,2);
     va_nn_vectors(i, :, :) = temp(:)';
-
-    perc = i / length(va_img_sample);
-    waitbar(perc, h, sprintf('%1.3f%%  Complete', perc * 100));
 end
 
-close(h);
-
-Yva = zeros(length(va_img_sample), 1);
-for i =1:length(va_img_sample)
-    Yva(i) = va_img_sample{i, 3};
-end
 
 %% Build data for training from extracted features
 Xva = [Xva va_nn_vectors];
@@ -276,7 +250,21 @@ Xva = double(Xva);
 l = predicted_label;
 prob = prob_estimates;
 
-% Compute the accuracy
-acc = mean(l==Yva)*100;
+database = ["Abdullah Gul", "Mercury", "Gemini", "Apollo", "Skylab", "Skylab B", "ISS"];
 
-fprintf('The accuracy of face recognition is:%.2f \n', acc)
+string = database(l);
+
+% Visualise the test images
+figure
+imshow(plt_img)
+hold on
+
+for i = 1:size(bbox_position, 1)
+rectangle('Position', [bbox_position(i, 2),bbox_position(i, 1),bbox_position(i, 3:4)],...
+    'EdgeColor', 'b', 'LineWidth', 3)
+end
+
+xt = x + 99;
+yt = y + 3;
+
+text(100, 100, string) 
