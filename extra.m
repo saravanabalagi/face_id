@@ -164,13 +164,23 @@ prob3 = prob2(prob2 > threshold, :);
 % end
 
 bbox_position = selectedBbox;
+patches = zeros(size(selectedBbox, 1), resize_size(1), resize_size(2));
 
-x = bbox_position(2);
-y = bbox_position(1);
-window_x = bbox_position(4);
-window_y = bbox_position(3);
+for i=1:size(selectedBbox, 1)
+    x = bbox_position(i, 2);
+    y = bbox_position(i, 1);
+    window_x = bbox_position(i, 4);
+    window_y = bbox_position(i, 3);
 
-patch = plt_img(y:y+window_y-1, x:x+window_x-1);
+    patches(i, :, :) = plt_img(y:y+window_y-1, x:x+window_x-1);
+end
+
+% x = bbox_position(2);
+% y = bbox_position(1);
+% window_x = bbox_position(4);
+% window_y = bbox_position(3);
+% 
+% patches = plt_img(y:y+window_y-1, x:x+window_x-1);
 
 
 %%
@@ -220,10 +230,12 @@ Yva = [];
 load('./models/fr_model.mat');
 
 nn_vector_size = 2622;
-va_nn_vectors = zeros(1, nn_vector_size);
+va_nn_vectors = zeros(size(patches, 1), nn_vector_size);
 
-for i =1:1
-    temp = single(patch); % 255 range.
+for i = 1:size(patches, 1)
+    temp = patches(i, :, :);
+    temp = reshape(temp, [64,64])
+    temp = single(temp); % 255 range.
     temp = imresize(temp, net.meta.normalization.imageSize(1:2));
     temp = repmat(temp, [1, 1, 3]);
     temp = bsxfun(@minus, temp, net.meta.normalization.averageImage);
@@ -250,7 +262,7 @@ Xva = double(Xva);
 l = predicted_label;
 prob = prob_estimates;
 
-database = ["Abdullah Gul", "Mercury", "Gemini", "Apollo", "Skylab", "Skylab B", "ISS"];
+database = ["Abdullah Gul", "Mercury", "Andy Roddick", "Apollo", "Skylab", "Skylab B", "ISS", "Mercury", "Gemini", "Apollo", "Skylab", "Skylab B", "ISS", "Mercury", "Gemini", "Apollo", "Skylab", "Skylab B", "Hi"];
 
 % Visualise the test images
 figure
@@ -258,8 +270,8 @@ imshow(plt_img)
 hold on
 
 for i = 1:size(bbox_position, 1)
-rectangle('Position', [bbox_position(i, 2),bbox_position(i, 1),bbox_position(i, 3:4)],...
-    'EdgeColor', 'b', 'LineWidth', 3)
-text(double(bbox_position(i, 2))-10, double(bbox_position(i, 1))-15, database(l(i)))
+    rectangle('Position', [bbox_position(i, 2),bbox_position(i, 1),bbox_position(i, 3:4)],...
+        'EdgeColor', 'b', 'LineWidth', 3)
+    text(double(bbox_position(i, 2))+5, double(bbox_position(i, 1))-15, database(l(i)), 'FontSize', 7)
 end
 
