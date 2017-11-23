@@ -101,7 +101,7 @@ imset = imageSet(images_dir{2}, 'recursive');
 for i=1:length(imset)
    parfor j = 1:imset(i).Count
         nNegFace = nNegFace + 1;
-    end
+   end
 end
 
 
@@ -247,7 +247,7 @@ end
 
 Ytr = [ones(nPosFace, 1); -1 * ones(nNegFace,1)];
 
-clear hog_vectors lbp_vectors nn_vectors
+% clear hog_vectors lbp_vectors nn_vectors
 
 
 %%
