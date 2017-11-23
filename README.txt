@@ -9,7 +9,7 @@ Assignment_2.m:
 	Part 2: Face Recognition and Verification
 
 bonus.m:
-	Bonus marks: Linked detector and recogniser, indentifies multiple individuals (drawn from validation dataset) correctly 
+	Bonus marks: Linked detector and recogniser, indentifies multiple individuals (drawn from validation dataset which the model has not seen before) correctly.
 	
 
 ######################################
