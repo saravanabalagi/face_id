@@ -273,11 +273,22 @@ disp('Finished feature extraction.')
 Xtr = double(Xtr);
 Xva = double(Xva);
 
-model = fitcecoc(Xtr, Ytr);
-[l,prob] = predict(model, Xva);
+% Train the recognizer
+% model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
+% [l,prob] = predict(model,Xva);
+
+addpath('library/liblinear-2.1/windows/');
+
+model = train(double(Ytr), sparse(double(Xtr)));
+[predicted_label, ~, prob_estimates] = predict(zeros(size(Xva, 1), 1), sparse(Xva), model);
+l = predicted_label;
+prob = prob_estimates;
+
+% model = fitcecoc(Xtr, Ytr);
+% [l,prob] = predict(model, Xva);
 
 % Compute the accuracy
-acc = mean(l==Yva)*100;
+acc = mean(l == Yva) * 100;
 
 fprintf('The accuracy of face recognition is:%.2f \n', acc)
 

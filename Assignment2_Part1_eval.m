@@ -113,7 +113,12 @@ Xva = Xva * coeff;
 Xva = double(Xva);
 
 %% Train the recognizer and evaluate the performance
-[l,prob] = predict(model, Xva);
+addpath('library/liblinear-2.1/windows/');
+
+% model = train(double(Ytr), sparse(double(Xtr)));
+[predicted_label, ~, prob_estimates] = predict(zeros(size(Xva, 1), 1), sparse(Xva), model);
+l = predicted_label;
+prob = prob_estimates;
 
 % Compute the accuracy
 acc = mean(l==Yva)*100;

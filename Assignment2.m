@@ -93,7 +93,7 @@ hog  = false;
 lbp  = false;
 bof  = false;
 nn   = true;
-pca_ = false;
+pca_ = true;
 
 hog_cellSize   = 8;
 lbp_cellSize   = 8;
