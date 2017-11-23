@@ -76,7 +76,7 @@ pca_ = true;
 hog_cellSize   = 8;
 lbp_cellSize   = 8;
 vocab_size     = 250;
-pca_components = 125;
+pca_components = 250;
 
 
 %%
@@ -260,13 +260,15 @@ end
 
 
 %% PCA
-[coeff,score,latent,~,explained] = pca(Xtr, 'NumComponents', pca_components);
+if true(pca_)
+    [coeff,score,latent,~,explained] = pca(Xtr, 'NumComponents', pca_components);
 
-Xtr = score;
+    Xtr = score;
 
-Xva = bsxfun(@minus ,Xva, mean(Xva));
-Xva = Xva * coeff;
-disp('Finished feature extraction.')
+    Xva = bsxfun(@minus ,Xva, mean(Xva));
+    Xva = Xva * coeff;
+    disp('Finished feature extraction.')
+end
 
 
 %% Train the recognizer and evaluate the performance

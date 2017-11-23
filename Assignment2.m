@@ -14,15 +14,14 @@
 % Add the path of used library.
 % - The function of adding path of liblinear and vlfeat is included.
 %==========================================================================
-% clear all
-clearvars -except tr_nn_vectors va_nn_vectors net
+clear all
 clc
+
 run ICV_setup
 
 % Hyperparameter of experiments
 resize_size=[64 64];
 
-% if ~exist('net')
 % Setup MatConvNet.
 addpath(genpath('./library/matconvnet/matlab'))
 vl_setupnn();
@@ -67,27 +66,6 @@ Xva = []; Yva = [];
 
 load('./data/face_recognition/face_recognition_data_tr.mat');
 load('./data/face_recognition/face_recognition_data_te.mat');
-
-
-%%
-
-% tr_data = zeros(length(tr_img_sample), resize_size(1), resize_size(2));
-% va_data = zeros(length(va_img_sample), resize_size(1), resize_size(2));
-% 
-% for i = 1:length(tr_img_sample)
-%     tr_data(i, :, :) = single(tr_img_sample{i, 1})/255;
-% end
-% 
-% for i = 1:length(va_img_sample)
-%     va_data(i, :, :) = single(va_img_sample{i, 1})/255;
-% end
-% 
-% % Centre data.
-% tr_data = bsxfun(@minus, tr_data, mean(tr_data));
-% va_data = bsxfun(@minus, va_data, mean(tr_data));
-
-
-%%
 
 hog  = false;
 lbp  = false;
@@ -204,8 +182,8 @@ if true(nn)
         else
             nn_vector_size = 2622;
 
-            tr_nn_vectors = zeros(size(tr_img_sample, 1), nn_vector_size);
-            va_nn_vectors = zeros(size(va_img_sample, 1), nn_vector_size);
+            tr_nn_vectors = zeros(length(tr_img_sample), nn_vector_size);
+            va_nn_vectors = zeros(length(va_img_sample), nn_vector_size);
 
             h = waitbar(0, 'Initializing waitbar...', 'Name', 'Recognition: Extracting features...');
 
@@ -246,7 +224,7 @@ if true(nn)
 end
 
 
-%%
+%% Prepare Training set and validation set for required features
 
 if true(hog)
     Xtr = cat(2, Xtr, tr_hog_vectors);
@@ -281,22 +259,16 @@ for i =1:length(va_img_sample)
 end
 
 
-%%
-
+%% PCA
 if true(pca_)
-    [coeff, score, latent, ~, explained] = pca(Xtr, 'NumComponents', pca_components);
+    [coeff,score,latent,~,explained] = pca(Xtr, 'NumComponents', pca_components);
 
     Xtr = score;
 
     Xva = bsxfun(@minus ,Xva, mean(Xva));
     Xva = Xva * coeff;
+    disp('Finished feature extraction.')
 end
-
-
-%%
-
-disp('Finished feature extraction.')
-
 
 %% Train the recognizer and evaluate the performance
 Xtr = double(Xtr);
@@ -308,9 +280,8 @@ Xva = double(Xva);
 
 addpath('library/liblinear-2.1/windows/');
 
-Mdl = train(double(Ytr), sparse(double(Xtr)));
-
-[predicted_label, ~, prob_estimates] = predict(zeros(size(Xva, 1), 1), sparse(Xva), Mdl);
+model = train(double(Ytr), sparse(double(Xtr)));
+[predicted_label, ~, prob_estimates] = predict(zeros(size(Xva, 1), 1), sparse(Xva), model);
 l = predicted_label;
 prob = prob_estimates;
 
@@ -321,20 +292,56 @@ prob = prob_estimates;
 acc = mean(l == Yva) * 100;
 
 fprintf('The accuracy of face recognition is:%.2f \n', acc)
-% Check your result on the raw images and try to analyse the limits of the
-% current method.
-
-% save your trained model for evaluation.
-save('face_recognizer.mat', 'Mdl')
-
 
 %% Visualization the result of face recognition
 
 data_idx = [1,30,50]; % The index of image in validation set
 nSample = 3; % number of visualize data. maximum should be 3
 % nPairs = length(data_idx); % unconment to get full size of 
-visualise_recognition(va_img_sample,prob,Yva,data_idx,nSample )
+visualise_recognition(va_img_sample,prob,Yva,data_idx,nSample)
 
+
+% Image and Visual Computing Assignment 2 Part 2: Face Verification
+%==========================================================================
+%   In this assignment, you are expected to use the previous learned method
+%   to cope with face recognition and verification problem. The vl_feat, 
+%   libsvm, liblinear and any other classification and feature extraction 
+%   library are allowed to use in this assignment. The built-in matlab 
+%   object-detection functionis not allowed. Good luck and have fun!
+%
+%                                               Released Date:   31/10/2017
+%==========================================================================
+
+%% Initialisation
+%==========================================================================
+% Add the path of used library.
+% - The function of adding path of liblinear and vlfeat is included.
+%==========================================================================
+clc
+clear all
+
+run ICV_setup
+
+% Hyperparameter of experiments
+resize_size=[64 64];
+
+% Setup MatConvNet.
+addpath(genpath('./library/matconvnet/matlab'))
+vl_setupnn();
+
+% Load the VGG-Face model.
+modelPath = fullfile(vl_rootnn,'data','models','vgg-face.mat') ;
+if ~exist(modelPath)
+  fprintf('Downloading the VGG-Face model ... this may take a while\n') ;
+  mkdir(fileparts(modelPath)) ;
+  urlwrite(...
+    'http://www.vlfeat.org/matconvnet/models/vgg-face.mat', ...
+    modelPath) ;
+end
+
+% Load the model and upgrade it to MatConvNet current version.
+net = load(modelPath);
+net = vl_simplenn_tidy(net);
 
 %% Part II: Face Verification: 
 %==========================================================================
@@ -351,8 +358,21 @@ disp('Verification:Extracting features..')
 cellSize = 8;
 Xtr = [];
 Xva = [];
+
+nn_1_train = [];
+nn_2_train = [];
+nn_1_val = [];
+nn_2_val = [];
+
+lbp_1_train = [];
+lbp_2_train = [];
+lbp_1_val = [];
+lbp_2_val = [];
+
 load('./data/face_verification/face_verification_tr.mat')
+% load('./data/face_verification/face_verification_va.mat')
 load('./data/face_verification/face_verification_te.mat')
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Loading the training data
 % -tr_img_pair/va_img_pair:
@@ -365,37 +385,14 @@ load('./data/face_verification/face_verification_te.mat')
 
 % Ytr2 = zeros(1800,2);
 
-nn_1_train = [];
-nn_2_train = [];
-nn_1_val = [];
-nn_2_val = [];
-
-lbp_1_train = [];
-lbp_2_train = [];
-lbp_1_val = [];
-lbp_2_val = [];
-
-hog_1_train = [];
-hog_2_train = [];
-hog_1_val = [];
-hog_2_val = [];
-
 %% Extract Features
 
 h = waitbar(0,'Name','Extracting features...','Initializing waitbar...');
 
 % You should construct the features in here. (read, resize, extract)
 for i =1:length(tr_img_pair)
-%     foldername = ['data/face_verification/images/', num2str(i)];
-%     mkdir(foldername);
-%     imwrite(tr_img_pair{i,1}, [foldername, '/', tr_img_pair{i,2}, '.png']);
-%     imwrite(tr_img_pair{i,3}, [foldername, '/', tr_img_pair{i,4}, '.png']);
-%     
-%     img1 = imread([foldername, '/', tr_img_pair{i,2}, '.png']);
-%     img2 = imread([foldername, '/', tr_img_pair{i,4}, '.png']);
     
     % First Image
-    
     im_ = single(tr_img_pair{i,1}) ; % note: 255 range
     im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
     im_ = bsxfun(@minus,im_,net.meta.normalization.averageImage) ;
@@ -407,11 +404,8 @@ for i =1:length(tr_img_pair)
     temp = single(tr_img_pair{i,1})/255;
     lbp_1 = vl_lbp(temp, cellSize);
     lbp_1_train = [lbp_1_train; lbp_1(:)'];
-    hog_1 = vl_hog(temp, cellSize);
-    hog_1_train = [hog_1_train; hog_1(:)'];
     
     % Second Image
-
     im_ = single(tr_img_pair{i,3}) ; % note: 255 range
     im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
     im_ = bsxfun(@minus,im_,net.meta.normalization.averageImage) ;
@@ -423,48 +417,14 @@ for i =1:length(tr_img_pair)
     temp = single(tr_img_pair{i,3})/255;
     lbp_2 = vl_lbp(temp, cellSize);
     lbp_2_train = [lbp_2_train; lbp_2(:)'];
-    hog_2 = vl_hog(temp, cellSize);
-    hog_2_train = [hog_2_train; hog_2(:)'];
-    
-%     diff = output1' - output2';
-%     Xtr = [Xtr;diff];
     
     perc = (i * 100) / (length(tr_img_pair) + length(va_img_pair));
     waitbar(perc/100,h,sprintf('%0.5f%%  Complete',perc))
-
-%     temp = single(tr_img_pair{i,1})/255;
-%     
-%     temp = vl_lbp(temp, cellSize);
-%     temp_Xtr1 = temp(:)';
-%     
-%     temp = single(tr_img_pair{i,3})/255;
-%     
-%     temp = vl_lbp(temp, cellSize);
-%     temp_Xtr2 = temp(:)';
-%     
-%     index = min(Ytr(i) + 2, 2)
-%     Ytr2(i, index) = 1;
-%     
-%     Xtr = [Xtr;temp_Xtr1-temp_Xtr2];
 end
 
-
-% BoW visual representation (Or any other better representation)
-
-
-% load('./data/face_verification/face_verification_te.mat')
 for i =1:length(va_img_pair)
     
-%     foldername = ['data/face_verification/val_images/', num2str(i)];
-%     mkdir(foldername);
-%     imwrite(va_img_pair{i,1}, [foldername, '/', va_img_pair{i,2}, '.png']);
-%     imwrite(va_img_pair{i,3}, [foldername, '/', va_img_pair{i,4}, '.png']);
-%     
-%     img1 = imread([foldername, '/', va_img_pair{i,2}, '.png']);
-%     img2 = imread([foldername, '/', va_img_pair{i,4}, '.png']);
-
     % First Image
-    
     im_ = single(va_img_pair{i,1}) ; % note: 255 range
     im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
     im_ = bsxfun(@minus,im_,net.meta.normalization.averageImage) ;
@@ -476,11 +436,8 @@ for i =1:length(va_img_pair)
     temp = single(va_img_pair{i,1})/255;
     lbp_1 = vl_lbp(temp, cellSize);
     lbp_1_val = [lbp_1_val; lbp_1(:)'];
-    hog_1 = vl_hog(temp, cellSize);
-    hog_1_val = [hog_1_val; hog_1(:)'];
     
     % Second Image
-
     im_ = single(va_img_pair{i,3}) ; % note: 255 range
     im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
     im_ = bsxfun(@minus,im_,net.meta.normalization.averageImage) ;
@@ -492,44 +449,12 @@ for i =1:length(va_img_pair)
     temp = single(va_img_pair{i,3})/255;
     lbp_2 = vl_lbp(temp, cellSize);
     lbp_2_val = [lbp_2_val; lbp_2(:)'];
-    hog_2 = vl_hog(temp, cellSize);
-    hog_2_val = [hog_2_val; hog_2(:)'];
-    
-%     Xva = [Xva;diff];
     
     perc = ((length(tr_img_pair) + i) * 100) / (length(tr_img_pair) + length(va_img_pair));
     waitbar(perc/100,h,sprintf('%0.5f%%  Complete',perc))
-    
-%     temp = single(va_img_pair{i,1})/255;
-%     temp = vl_lbp(temp, cellSize);
-%     temp_Xva1 = temp(:)';
-%     
-%     temp = single(va_img_pair{i,3})/255;
-%     temp = vl_lbp(temp, cellSize);
-%     temp_Xva2 = temp(:)';
-%     
-%     Xva = [Xva;temp_Xva1-temp_Xva2];
 end
 
 %% Build data for training from extracted features
-
-% Xtr = [nn_1_train-nn_2_train lbp_1_train-lbp_2_train hog_1_train-hog_2_train];
-% Xva = [nn_1_val-nn_2_val lbp_1_val-lbp_2_val hog_1_val-hog_2_val];
-
-% Xtr = [nn_1_train-nn_2_train lbp_1_train-lbp_2_train];
-% Xva = [nn_1_val-nn_2_val lbp_1_val-lbp_2_val];
-
-% Xtr = [nn_1_train-nn_2_train];
-% Xva = [nn_1_val-nn_2_val];
-
-% lbp_1_train_r = reshape(lbp_1_train, size(lbp_1_train,1), cellSize * cellSize, []);
-% lbp_2_train_r = reshape(lbp_2_train, size(lbp_2_train,1), cellSize * cellSize, []);
-% lbp_1_val_r = reshape(lbp_1_val, size(lbp_1_val,1), cellSize * cellSize, []);
-% lbp_2_val_r = reshape(lbp_2_val, size(lbp_2_val,1), cellSize * cellSize, []);
-% 
-% Xtr = [sqrt(sum((lbp_1_train_r-lbp_2_train_r).^2, 3)) sqrt(sum((nn_1_train-nn_2_train).^2, 2))];
-% Xva = [sqrt(sum((lbp_1_val_r-lbp_2_val_r).^2, 3)) sqrt(sum((nn_1_val-nn_2_val).^2, 2))];
-
 Xtr = [sqrt(sum((lbp_1_train-lbp_2_train)'.^2))' sqrt(sum((nn_1_train-nn_2_train)'.^2))'];
 Xva = [sqrt(sum((lbp_1_val-lbp_2_val)'.^2))' sqrt(sum((nn_1_val-nn_2_val)'.^2))'];
 
@@ -537,7 +462,7 @@ Xtr = double(Xtr);
 Xva = double(Xva);
 
 %% PCA
-pca_components = min(size(Xtr,2),125);
+pca_components = min(size(Xtr,2));
 [coeff,score,latent,~,explained] = pca(Xtr, 'NumComponents', pca_components);
 
 Xtr = score;
@@ -546,29 +471,19 @@ Xva = bsxfun(@minus ,Xva, mean(Xva));
 Xva = Xva * coeff;
 
 %% Train the verifier and evaluate the performance
+
 % Train the recognizer and evaluate the performance
-%model = fitcknn(Xtr,Ytr,'NumNeighbors',3);
-%[l,prob] = predict(model,Xva);
-
-% model = fitcsvm(Xtr,Ytr);
-% [l,prob] = predict(model,Xva);
-
 addpath('library/liblinear-2.1/windows/');
 
-Mdl = train(double(Ytr), sparse(double(Xtr)));
+model = train(double(Ytr), sparse(double(Xtr)));
 
-[predicted_label, ~, prob_estimates] = predict(zeros(size(Xva, 1), 1), sparse(Xva), Mdl);
+[predicted_label, ~, prob_estimates] = predict(zeros(size(Xva, 1), 1), sparse(Xva), model);
 l = predicted_label;
 prob = prob_estimates;
 
 % Compute the accuracy
 acc = mean(l==Yva)*100;
-
 fprintf('The accuracy of face verification is:%.2f \n', acc)
-
-% save your trained model for evaluation.
-save('face_verifier.mat', 'Mdl')
-
 
 %% Visualization the result of face verification
 

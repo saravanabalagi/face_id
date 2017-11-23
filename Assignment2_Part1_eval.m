@@ -68,7 +68,7 @@ load('./models/fr_model.mat');
 load('./data/face_recognition/face_recognition_data_te.mat');
 
 lbp_cellSize   = 8;
-pca_components = 125;
+pca_components = 250;
 
 va_lbp_vectors = zeros(length(va_img_sample), lbp_cellSize * lbp_cellSize * 58);
 for i =1:length(va_img_sample)
