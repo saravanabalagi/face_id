@@ -252,8 +252,6 @@ prob = prob_estimates;
 
 database = ["Abdullah Gul", "Mercury", "Gemini", "Apollo", "Skylab", "Skylab B", "ISS"];
 
-string = database(l);
-
 % Visualise the test images
 figure
 imshow(plt_img)
@@ -262,9 +260,6 @@ hold on
 for i = 1:size(bbox_position, 1)
 rectangle('Position', [bbox_position(i, 2),bbox_position(i, 1),bbox_position(i, 3:4)],...
     'EdgeColor', 'b', 'LineWidth', 3)
-text(double(bbox_position(i, 2))-10, double(bbox_position(i, 1))-15, string) 
+text(double(bbox_position(i, 2))-10, double(bbox_position(i, 1))-15, database(l(i)))
 end
-
-xt = x + 99;
-yt = y + 3;
 
