@@ -337,7 +337,6 @@ visualise_recognition(va_img_sample,prob,Yva,data_idx,nSample )
 % - Train the verifier and evaluate its performance
 %==========================================================================
 
-
 disp('Verification:Extracting features..')
 
 cellSize = 8;
@@ -446,6 +445,7 @@ end
 
 % load('./data/face_verification/face_verification_va.mat')
 for i =1:length(va_img_pair)
+    
 %     foldername = ['data/face_verification/val_images/', num2str(i)];
 %     mkdir(foldername);
 %     imwrite(va_img_pair{i,1}, [foldername, '/', va_img_pair{i,2}, '.png']);
@@ -489,7 +489,7 @@ for i =1:length(va_img_pair)
 %     Xva = [Xva;diff];
     
     perc = ((length(tr_img_pair) + i) * 100) / (length(tr_img_pair) + length(va_img_pair));
-    waitbar(perc,h,sprintf('%0.5f%%  Complete',perc))
+    waitbar(perc/100,h,sprintf('%0.5f%%  Complete',perc))
     
 %     temp = single(va_img_pair{i,1})/255;
 %     temp = vl_lbp(temp, cellSize);
@@ -501,6 +501,7 @@ for i =1:length(va_img_pair)
 %     
 %     Xva = [Xva;temp_Xva1-temp_Xva2];
 end
+
 %% Build data for training from extracted features
 
 % Xtr = [nn_1_train-nn_2_train lbp_1_train-lbp_2_train hog_1_train-hog_2_train];
@@ -511,6 +512,14 @@ end
 
 % Xtr = [nn_1_train-nn_2_train];
 % Xva = [nn_1_val-nn_2_val];
+
+% lbp_1_train_r = reshape(lbp_1_train, size(lbp_1_train,1), cellSize * cellSize, []);
+% lbp_2_train_r = reshape(lbp_2_train, size(lbp_2_train,1), cellSize * cellSize, []);
+% lbp_1_val_r = reshape(lbp_1_val, size(lbp_1_val,1), cellSize * cellSize, []);
+% lbp_2_val_r = reshape(lbp_2_val, size(lbp_2_val,1), cellSize * cellSize, []);
+% 
+% Xtr = [sqrt(sum((lbp_1_train_r-lbp_2_train_r).^2, 3)) sqrt(sum((nn_1_train-nn_2_train).^2, 2))];
+% Xva = [sqrt(sum((lbp_1_val_r-lbp_2_val_r).^2, 3)) sqrt(sum((nn_1_val-nn_2_val).^2, 2))];
 
 Xtr = [sqrt(sum((lbp_1_train-lbp_2_train)'.^2))' sqrt(sum((nn_1_train-nn_2_train)'.^2))'];
 Xva = [sqrt(sum((lbp_1_val-lbp_2_val)'.^2))' sqrt(sum((nn_1_val-nn_2_val)'.^2))'];
@@ -539,8 +548,6 @@ model = fitcsvm(Xtr,Ytr);
 acc = mean(l==Yva)*100;
 
 fprintf('The accuracy of face verification is:%.2f \n', acc)
-
-
 
 %% Visualization the result of face verification
 
