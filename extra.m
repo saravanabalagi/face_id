@@ -171,8 +171,14 @@ for i=1:size(selectedBbox, 1)
     y = bbox_position(i, 1);
     window_x = bbox_position(i, 4);
     window_y = bbox_position(i, 3);
-
-    patches(i, :, :) = plt_img(y:y+window_y-1, x:x+window_x-1);
+    
+    patches(i, :, :) = imresize(plt_img(y:y+window_y-1, x:x+window_x-1), resize_size);
+    
+%     if size(plt_img(y:y+window_y-1, x:x+window_x-1), 1) ~= 64
+%         patches(i, :, :) = padarray(plt_img(y:y+window_y-1, x:x+window_x-1), [0, 0]);
+%     else
+%         patches(i, :, :) = plt_img(y:y+window_y-1, x:x+window_x-1);
+%     end
 end
 
 % x = bbox_position(2);
@@ -234,7 +240,7 @@ va_nn_vectors = zeros(size(patches, 1), nn_vector_size);
 
 for i = 1:size(patches, 1)
     temp = patches(i, :, :);
-    temp = reshape(temp, [64,64])
+    temp = reshape(temp, [64,64]);
     temp = single(temp); % 255 range.
     temp = imresize(temp, net.meta.normalization.imageSize(1:2));
     temp = repmat(temp, [1, 1, 3]);
@@ -262,7 +268,7 @@ Xva = double(Xva);
 l = predicted_label;
 prob = prob_estimates;
 
-database = ["Abdullah Gul", "Mercury", "Andy Roddick", "Apollo", "Skylab", "Skylab B", "ISS", "Mercury", "Gemini", "Apollo", "Skylab", "Skylab B", "ISS", "Mercury", "Gemini", "Apollo", "Skylab", "Skylab B", "Hi"];
+database = ["Abdullah Gul", "Mercury", "Andy Roddick", "Angelina Jolie", "Skylab", "Skylab B", "ISS", "Mercury", "Gemini", "Apollo", "Skylab", "Skylab B", "ISS", "Mercury", "Gemini", "Apollo", "Skylab", "Skylab B", "Hi"];
 
 % Visualise the test images
 figure
