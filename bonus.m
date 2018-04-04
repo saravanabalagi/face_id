@@ -268,7 +268,7 @@ Xva = double(Xva);
 l = predicted_label;
 prob = prob_estimates;
 
-database = ["Abdullah Gul", "Mercury", "Andy Roddick", "Angelina Jolie", "Skylab", "Skylab B", "ISS", "Mercury", "Gemini", "Apollo", "Skylab", "Skylab B", "ISS", "Mercury", "Gemini", "Apollo", "Skylab", "Skylab B", "Hi"];
+database = ["Abdullah Gul", "Amelie Mauresmo", "Andy Roddick", "Angelina Jolie", "Atal Bihari", "Bill Gates", "Bill Simon", "Britney Spears", "Carlos Menem", "Carlos Moya", "David Nalbandian", "Dick Cheney", "Dominique de", "Eduardo Duhalde", "Fidel Castro", "George Robertson", "Halle Berry", "Hamid Karzai", "Hillary Clinton", "Hu Jintao", "Igor Ivanov", "James Blake", "Jean Charest", "Jennifer Aniston", "Jennifer Lopez", "Jeremy Greenstock", "Jiang Zemin", "John Bolton", "John Howard", "John Kerry", "John Snow", "Joschka Fischer", "Jose Maria", "Julianne Moore", "Julie Gerberding"];
 
 % Visualise the test images
 figure
@@ -278,6 +278,6 @@ hold on
 for i = 1:size(bbox_position, 1)
     rectangle('Position', [bbox_position(i, 2),bbox_position(i, 1),bbox_position(i, 3:4)],...
         'EdgeColor', 'b', 'LineWidth', 3)
-    text(double(bbox_position(i, 2))+5, double(bbox_position(i, 1))-15, database(l(i)), 'FontSize', 7)
+    text(double(bbox_position(i, 2))+5, double(bbox_position(i, 1))-15, database(l(i)), 'FontSize', 7, 'Color', 'y')
 end
 
