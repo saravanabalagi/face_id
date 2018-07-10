@@ -10,8 +10,8 @@ Uses VGG Face matconvnet for deep feature extraction along with features obtaine
 ### Detection
 Can detect most faces. (Warning may have bias towards the data we trained it with)
 
-### Recognition and Verification
-Can recognize and verify the following faces:
+### Recognition
+Can recognize the following faces:
 
 1. Abdullah Gul
 2. Amelie Mauresmo
@@ -49,9 +49,17 @@ Can recognize and verify the following faces:
 34. Julianne Moore
 35. Julie Gerberding
 
-### Can it detect mine?
+Trained with approximately `10-15` cropped face images of size `64x64` for each person.
 
-Yes...! All that's requires is a few images of yours. More images = More Accurate verification
+### Verification
+
+Can verify if it is the same person given two images.
+
+Trained with 1800 records each containing two faces and ground truth value of whether they were same or not.
+
+### Can it recognize and/or verify my face?
+
+Yes...! All that's required is a few images of your face. Train the model with the same and Voila! More images = More Accurate verification
 
 ## Marker Help Information
 
